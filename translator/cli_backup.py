@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" cli_back.py """
+""" cli_backup.py """
 import argparse
 import logging
 

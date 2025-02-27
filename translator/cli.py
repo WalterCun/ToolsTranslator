@@ -79,9 +79,9 @@ def handle_auto_translate(args):
     # Pasar el directorio como objeto Path a Translator
     translator = Translator(file_dir)
     translator.auto_translate(base=base_lang, langs='all' if 'all' in args.langs else args.langs, force=args.force)
-    print(f"Traducciones desde {base_lang} auto traducidas en {file_dir}.")
+    print(f"Traducciones desde '{base_lang}' auto traducidas en '{file_dir}'.")
 
 if __name__ == "__main__":
     import sys
-    sys.argv = ["cli.py", "auto_translate", "en.json", "--lang", "es"]
+    sys.argv = ["cli.py", "auto_translate", "struct_files/en.json", "--lang", "es"]
     main()

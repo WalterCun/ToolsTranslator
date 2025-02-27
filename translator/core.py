@@ -69,6 +69,9 @@ class Translator:
         # Crear el directorio de traducciones si no existe
         self.translations_dir.mkdir(parents=True, exist_ok=True)
 
+    def __get_languages_supported(self):
+        pass
+
     def _validate_lang(self, lang):
         if lang not in self.language_support.values():
             return False
