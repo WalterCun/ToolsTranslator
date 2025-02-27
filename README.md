@@ -1,3 +1,21 @@
+# ToolsTranslator
+
+ToolsTranslator es una librería para realizar traducciones de texto de forma eficiente.
+
+## Instalación
+```bash
+pip install ToolsTranslator
+```
+
+## Uso
+```python
+from ToolsTranslator.core import translate
+
+# Traducción de un texto
+result = translate("Hola", target_language="en")
+print(result)  # Output: "Hello"
+```
+
 # Configuración del proyecto
 
 Sigue estos pasos para configurar y ejecutar el proyecto en tu entorno local.
