@@ -2,7 +2,7 @@
 """ translate_api.py """
 import requests
 
-from config import settings
+from translator.config import settings
 
 
 class LibreTranslate:
