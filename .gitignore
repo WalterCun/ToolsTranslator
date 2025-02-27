@@ -170,3 +170,4 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 /tools/LibreTranslate/
+/uv.lock
