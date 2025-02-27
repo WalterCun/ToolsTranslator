@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = True
 
-    BASE_DIR: Path = Path(__file__).resolve().parent
+    BASE_DIR: Path = Path(__file__).resolve().parent.parent
     HEADERS: dict[str, str] = {
         # "User-Agent": (
         #     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -50,12 +50,8 @@ class Settings(BaseSettings):
         :ivar env_file: The path to the `.env` file containing environment variables.
         :type env_file: str
         """
-        env_file = str(Path(__file__).resolve().parent / ".env")  # Ruta al archivo .env
+        env_file = str(Path(__file__).resolve().parent.parent / ".env")  # Ruta al archivo .env
 
 
 # noinspection PyArgumentList
 settings = Settings()
-
-
-if __name__ == '__main__':
-    print(settings.BASE_DIR)
