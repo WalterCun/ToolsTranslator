@@ -171,3 +171,4 @@ cython_debug/
 .pypirc
 /tools/LibreTranslate/
 /uv.lock
+/translator/tools/LibreTranslate/

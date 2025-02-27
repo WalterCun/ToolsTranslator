@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Tuple, Union
 # Configuración de logs
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
+__all__ = ['json_extract_entries']
 
 def json_extract_entries(data: Union[Dict, List], path="") -> List[Tuple[str, str]]:
     """
