@@ -26,33 +26,7 @@ class Translator:
         default_lang (str): Default language code.
         current_lang (str): Currently selected language code.
     """
-    language_support = {
-        "Inglés": "en",
-        "Chino mandarín": "zh",
-        "Hindi": "hi",
-        "Español": "es",
-        "Árabe": "ar",
-        "Bengalí": "bn",
-        "Francés": "fr",
-        "Ruso": "ru",
-        "Portugués": "pt",
-        "Urdu": "ur",
-        "Indonesio": "id",
-        "Alemán": "de",
-        "Japonés": "ja",
-        "Swahili": "sw",
-        "Maratí": "mr",
-        "Tamil": "ta",
-        "Turco": "tr",
-        "Coreano": "ko",
-        "Vietnamita": "vi",
-        "Italiano": "it",
-        "Tailandés": "th",
-        "Persa (farsi)": "fa",
-        "Polaco": "pl",
-        "Ucraniano": "uk",
-        "Malay (malayo)": "ms"
-    }
+    language_support: list = []
 
     def __init__(self, translations_dir: Path, default_lang="es"):
         """
@@ -61,19 +35,21 @@ class Translator:
         :param translations_dir: Directorio donde se almacenan los archivos de traducción.
         :param default_lang: Idioma predeterminado.
         """
-
+        self.api = LibreTranslate()
+        self.__get_languages_supported()
         self.translations_dir = Path(translations_dir)
         self.default_lang = default_lang
         self.current_lang = default_lang
         self.dict_trans = self._load_translations(default_lang)
+
         # Crear el directorio de traducciones si no existe
         self.translations_dir.mkdir(parents=True, exist_ok=True)
 
     def __get_languages_supported(self):
-        pass
+        self.language_support = self.api.get_supported_languages()
 
     def _validate_lang(self, lang):
-        if lang not in self.language_support.values():
+        if lang not in self.language_support:
             return False
         return True
 
@@ -205,21 +181,21 @@ class Translator:
         """
         lt = LibreTranslate()
 
-        no_support_base = [item for item in [base] if item not in self.language_support.values()]
+        no_support_base = [item for item in [base] if item not in self.language_support]
         if isinstance(langs, str):
             if langs == 'all':
-                langs = self.language_support.values()
+                langs = self.language_support
 
         if no_support_base:
             logger.error(f"El idioma base no soportado {no_support_base}")
             return
 
-        no_support = [item for item in langs if item not in self.language_support.values()]
+        no_support = [item for item in langs if item not in self.language_support]
         limpiar_langs = None
 
         if no_support:
             logger.info(f"No se encuentra soporte para {no_support}")
-            limpiar_langs = [item for item in langs if item in self.language_support.values()]
+            limpiar_langs = [item for item in langs if item in self.language_support]
             logger.info(f"Limpiando lenguajes no soportados")
 
         lang_work = limpiar_langs or no_support or langs
