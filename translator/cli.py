@@ -72,14 +72,14 @@ def handle_add_text(args):
     file_path = args.file
 
     if not file_path.parent.exists():
-        print(f"Error: El directorio '{file_path.parent}' no existe.")
+        log.error(f"El directorio '{file_path.parent}' no existe.")
         return
 
-    print(f"Las nuevas traducciones se guardarán en: {file_path.parent}")
+    log.info(f"Las nuevas traducciones se guardarán en: {file_path.parent}")
 
     translator = Translator(file_path.parent)
     translator.add_trans(key=args.key, lang=args.lang, value=args.value)
-    print(f"Traducción agregada en {file_path}: {args.key} -> {args.value} en {args.lang}.")
+    log.info(f"Traducción agregada en {file_path}: {args.key} -> {args.value} en {args.lang}.")
 
 
 def handle_auto_translate(args):
@@ -87,7 +87,7 @@ def handle_auto_translate(args):
     file_path = args.file
 
     if not file_path.exists():
-        print(f"Error: El archivo '{file_path}' no existe.")
+        log.error(f"El archivo '{file_path}' no existe.")
         return
 
     # Detectar el idioma base desde el nombre del archivo o usar --base
