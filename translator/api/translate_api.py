@@ -55,7 +55,7 @@ class LibreTranslate:
         try:
             response = requests.get(self.url_languages, headers=settings.HEADERS)
             response.raise_for_status()  # Lanza un error si el código HTTP indica un fallo.
-            return response.json()  # Asumiendo que devuelve JSON.
+            return response.json()
         except requests.RequestException as e:
             requests_cache.clear()
             raise Exception(f"Error al realizar la solicitud: {str(e)}")
@@ -71,9 +71,15 @@ class LibreTranslate:
             A list of dictionaries containing language information. Returns an empty list if an error occurs.
         """
         try:
-            # Realiza la solicitud con soporte de caché
             response = self._request_supported_languages()
-            return response or []
+            languages = set()
+            if response:
+                for i in response:
+                    if lang_base == i.get('code'):
+                        return i.get('targets') or []
+                    elif lang_base == 'auto':
+                        languages.add(i.get('code'))
+            return list(languages) or []
         except Exception as e:
             log.error(f"Error al obtener idiomas: {str(e)}")
             return []
@@ -122,9 +128,3 @@ class LibreTranslate:
             retry += 1
 
         return ""
-
-
-# if __name__ == '__main__':
-#     libre = LibreTranslate()
-#     print(libre.get_supported_languages())
-#     print(libre.translate("Hola", "es", "en"))
