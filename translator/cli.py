@@ -13,7 +13,7 @@ config_logging(log)
 LANG_PATTERN = re.compile(r"\b([a-z]{2}(-[a-z]{2})?)\b", re.IGNORECASE)
 
 
-def extract_lang_info_from_filename(path: Path) -> dict[str,str]:
+def extract_lang_info_from_filename(path: Path) -> dict[str,str or Path]:
     """
     Extracts language and other metadata from a file's path.
 
@@ -33,8 +33,8 @@ def extract_lang_info_from_filename(path: Path) -> dict[str,str]:
     match = LANG_PATTERN.search(file)
 
     return {
-        "path": str(path),
-        "dir": str(directory),
+        "path": path,
+        "dir": directory,
         "lang": match.group(1) if match else None,
         "ext": ext,
         "name": path.name
@@ -97,20 +97,19 @@ def handle_auto_translate(args):
     file_dir = info_file.get("dir")
 
     # Set info base_lang if not exits and extension file
-    base_lang = args.base if args.base else info_file.get("lang")
-    ext = info_file.get("ext")
+    lang = args.base if args.base else info_file.get("lang")
 
-    if not base_lang:
+    if not lang:
         log.warning("Warning: No se detectó el idioma base en el nombre del archivo. Configurado autodetect.")
-        base_lang = 'auto'
+        lang = 'auto'
 
-    log.info(f"Idioma base configurado: {base_lang}")
+    log.info(f"Idioma base configurado: {lang}")
     log.info(f"Las nuevas traducciones se guardarán en: {file_dir}")
 
     # Pasar el directorio como objeto Path a Translator
-    # translator = Translator(file_dir)
-    # translator.auto_translate(base=base_lang, langs='all' if 'all' in args.langs else args.langs, force=args.force)
-    # print(f"Traducciones desde '{base_lang}' auto traducidas en '{file_dir}'.")
+    translator = Translator(file_dir, default_lang=lang, meta=info_file)
+    translator.auto_translate(langs='all' if 'all' in args.langs else args.langs, force=args.force)
+    # print(f"Traducciones desde '{lang}' auto traducidas en '{file_dir}'.")
 
 
 if __name__ == "__main__":
