@@ -116,5 +116,5 @@ if __name__ == "__main__":
     import sys
 
     # sys.argv = ["cli.py", "auto_translate", "struct_files/en.json", "--lang", "es"]
-    sys.argv = ["cli.py", "auto_translate", "struct_files/i18n.ts", "--lang", "es"]
+    sys.argv = ["cli.py", "auto_translate", "struct_files/i18n.ts", "--lang", "all"]
     main()
