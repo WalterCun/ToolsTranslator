@@ -177,25 +177,28 @@ class Translator:
         Returns:
             None
         """
-
-        no_support_base = [item for item in [self.current_lang] if item not in self.language_support]
-        if isinstance(langs, str):
-            if langs == 'all':
-                langs = self.language_support
-
-        if no_support_base:
-            log.error(f"El idioma base no soportado {no_support_base}")
-            return
-
-        no_support = [item for item in langs if item not in self.language_support]
         limpiar_langs = None
+        no_support = None
+        _langs = None
 
-        if no_support:
-            log.info(f"No se encuentra soporte para {no_support}")
-            limpiar_langs = [item for item in langs if item in self.language_support]
-            log.info(f"Limpiando lenguajes no soportados")
+        if isinstance(langs, str) and langs == 'all':
+            _langs = self.language_support
+        elif isinstance(langs, list):
+            no_support_base = [item for item in [self.current_lang] if item not in self.language_support]
+            print('no_support_base: ', no_support_base)
 
-        lang_work = limpiar_langs or no_support or langs
+            if no_support_base:
+                log.error(f"El idioma base no soportado {no_support_base}")
+                return
+            no_support = [item for item in langs if item not in self.language_support]
+            limpiar_langs = None
+            print('no_support: ', no_support)
+            if no_support:
+                log.info(f"No se encuentra soporte para {no_support}")
+                limpiar_langs = [item for item in langs if item in self.language_support]
+                log.info(f"Limpiando lenguajes no soportados")
+
+        lang_work = limpiar_langs or no_support or _langs
         log.info(f"lenguajes a trabajar {lang_work}")
 
         base_data = self._load_translations(self.current_lang)
