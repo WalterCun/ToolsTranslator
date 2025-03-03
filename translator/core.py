@@ -7,6 +7,7 @@ from pathlib import Path
 
 from api.translate_api import LibreTranslate
 from config_logging import config_logging
+from structs import get_content_json_file, serializer_json
 
 log = logging.getLogger(__name__)
 config_logging(log, logging.INFO)
@@ -84,6 +85,20 @@ class Translator:
                 return json.load(file)
         else:
             return {}
+
+    def _load_struct_translate(self, base_file: str = None) -> None:
+        print(self.meta)
+        if self.meta.get('ext') == 'json':
+            json_data = get_content_json_file(base_file or self.meta.get('path'))
+            extracted_texts = serializer_json(json_data)
+            for path, text in extracted_texts:
+                print(f"Ruta: {path} -> {text}")
+        elif self.meta.get('ext') == 'yaml':
+            pass
+        elif self.meta.get('ts') == 'ts' or self.meta.get('name') == 'i18n.ts':
+            pass
+        else:
+            raise ValueError(f"Formato no soportado {self.meta.get('ext')}")
 
     def _save_translations(self, lang, translations):
         """
@@ -177,12 +192,12 @@ class Translator:
         Returns:
             None
         """
-        limpiar_langs = None
-        no_support = None
-        _langs = None
+        # limpiar_langs = None
+        # no_support = None
+        lang_work = None
 
         if isinstance(langs, str) and langs == 'all':
-            _langs = self.language_support
+            lang_work = self.language_support
         elif isinstance(langs, list):
             no_support_base = [item for item in [self.current_lang] if item not in self.language_support]
             print('no_support_base: ', no_support_base)
@@ -198,17 +213,18 @@ class Translator:
                 limpiar_langs = [item for item in langs if item in self.language_support]
                 log.info(f"Limpiando lenguajes no soportados")
 
-        lang_work = limpiar_langs or no_support or _langs
+        # lang_work = limpiar_langs or no_support or _langs
+        # lang_work = _langs
         log.info(f"lenguajes a trabajar {lang_work}")
 
-        base_data = self._load_translations(self.current_lang)
-        for lang in lang_work:
-            work = self._load_translations(lang)
-            for bkey, btext in base_data.items():
-                if (not work.get(bkey) and bkey not in work.keys()) or force:
-                    translated = self.api.translate(btext, self.current_lang, lang)
-                    self.add_trans(bkey, lang, translated)
-                    log.info(f"AutoTraducción de llave {bkey} >> {translated}")
+        base_data = self._load_struct_translate(base_file)
+        # for lang in lang_work:
+        #     work = self._load_translations(lang)
+        #     for bkey, btext in base_data.items():
+        #         if (not work.get(bkey) and bkey not in work.keys()) or force:
+        #             translated = self.api.translate(btext, self.current_lang, lang)
+        #             self.add_trans(bkey, lang, translated)
+        #             log.info(f"AutoTraducción de llave {bkey} >> {translated}")
 
     #
     def __getattr__(self, key):
