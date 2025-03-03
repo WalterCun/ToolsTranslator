@@ -62,13 +62,18 @@ class LibreTranslate:
 
     def get_supported_languages(self, lang_base):
         """
-        Requests the list of supported languages from the API and stores it in a cache.
+        Retrieves a list of supported languages for translation based on the base language provided.
 
-        :param retry: int
-            The current retry attempt count, used for managing retries on failure.
+        If the base language is matched in the response, it returns the list of target languages.
+        Otherwise, if the base language is set to automatic detection ("auto"), it adds all
+        available language codes to a set and finally returns them as a list.
 
-        :return: list[dict]
-            A list of dictionaries containing language information. Returns an empty list if an error occurs.
+        :param lang_base: Base language code to filter or retrieve available target languages.
+                          Use "auto" for automatic detection of all available languages.
+        :type lang_base: str
+        :return: A list of target language codes if the base language is found or 'auto' is specified.
+                 Returns an empty list if no supported languages are found or an error occurs.
+        :rtype: list
         """
         try:
             response = self._request_supported_languages()
