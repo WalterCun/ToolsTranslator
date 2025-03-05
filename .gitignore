@@ -172,3 +172,5 @@ cython_debug/
 /tools/LibreTranslate/
 /uv.lock
 /translator/tools/LibreTranslate/
+/struct_files/
+/translate_cache.sqlite
