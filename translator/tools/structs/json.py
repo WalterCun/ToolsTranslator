@@ -249,7 +249,7 @@ class JSON:
 
 # Ejemplo de uso de la clase GestionarJSON
 if __name__ == "__main__":
-    gestor_json = JSON(r"D:\Coders\ToolsTranslator\translator\struct_files\en.json")
+    gestor_json = JSON(r"/struct_files\en.json")
 
     # Cargar datos desde un archivo JSON
     datos = gestor_json.get_content_json_file()
