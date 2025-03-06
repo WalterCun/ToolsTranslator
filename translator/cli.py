@@ -4,7 +4,9 @@ import re
 from pathlib import Path
 
 from config_logging import config_logging
-from core import Translator
+from translator.core.autotranslate import AutoTranslate
+# from translator.core.backup import Translator
+from translator.models.info_file import InfoFile
 
 log = logging.getLogger(__name__)
 config_logging(log)
@@ -13,7 +15,7 @@ config_logging(log)
 LANG_PATTERN = re.compile(r"\b([a-z]{2}(-[a-z]{2})?)\b", re.IGNORECASE)
 
 
-def extract_lang_info_from_filename(path: Path) -> dict[str,str]:
+def extract_lang_info_from_filename(path: Path) -> dict[str, str or Path]:
     """
     Extracts language and other metadata from a file's path.
 
@@ -33,9 +35,9 @@ def extract_lang_info_from_filename(path: Path) -> dict[str,str]:
     match = LANG_PATTERN.search(file)
 
     return {
-        "path": str(path),
-        "dir": str(directory),
-        "lang": match.group(1) if match else None,
+        "path": path,
+        "directory": directory,
+        "lang": str(match.group(1)) if match else None,
         "ext": ext,
         "name": path.name
     }
@@ -56,66 +58,62 @@ def main():
     auto_translate_parser = subparsers.add_parser("auto_translate", help="Auto translate")
     auto_translate_parser.add_argument("file", type=Path, help="Archivo JSON a traducir")
     auto_translate_parser.add_argument("--base", help="Idioma base (obligatorio si no está en el nombre del archivo)")
+    auto_translate_parser.add_argument("--output", help="Directorio de salida para los archivos de traduccion")
     auto_translate_parser.add_argument("--langs", required=True, nargs="*", help="Idiomas destino (e.g., es, en, fr)")
     auto_translate_parser.add_argument("--force", action="store_true", help="Forzar traducciones")
+    auto_translate_parser.add_argument("--overwrite", action="store_true", help="Sobreescribir traducciones")
 
     args = parser.parse_args()
 
     if args.command == "add":
-        handle_add_text(args)
+        # handle_add_text(args
+        pass
     elif args.command == "auto_translate":
         handle_auto_translate(args)
 
 
-def handle_add_text(args):
-    """ Maneja el comando 'add' para agregar traducciones. """
-    file_path = args.file
-
-    if not file_path.parent.exists():
-        log.error(f"El directorio '{file_path.parent}' no existe.")
-        return
-
-    log.info(f"Las nuevas traducciones se guardarán en: {file_path.parent}")
-
-    translator = Translator(file_path.parent)
-    translator.add_trans(key=args.key, lang=args.lang, value=args.value)
-    log.info(f"Traducción agregada en {file_path}: {args.key} -> {args.value} en {args.lang}.")
+# def handle_add_text(args):
+#     """ Maneja el comando 'add' para agregar traducciones. """
+#     file_path = args.file
+#
+#     if not file_path.parent.exists():
+#         log.error(f"El directorio '{file_path.parent}' no existe.")
+#         return
+#
+#     log.info(f"Las nuevas traducciones se guardarán en: {file_path.parent}")
+#
+#     translator = Translator(file_path.parent)
+#     translator.add_trans(key=args.key, lang=args.lang, value=args.value)
+#     log.info(f"Traducción agregada en {file_path}: {args.key} -> {args.value} en {args.lang}.")
 
 
 def handle_auto_translate(args):
     """ Maneja la traducción automática desde un archivo JSON. """
-    file_path = args.file
 
+    file_path = args.file
     if not file_path.exists():
         log.error(f"El archivo '{file_path}' no existe.")
         return
 
     # Detectar el idioma base desde el nombre del archivo o usar --base
-    info_file = extract_lang_info_from_filename(file_path)
+    info_file = InfoFile.from_dict(extract_lang_info_from_filename(file_path))
 
-    # Obtener el directorio donde está el archivo
-    file_dir = info_file.get("dir")
-
-    # Set info base_lang if not exits and extension file
-    base_lang = args.base if args.base else info_file.get("lang")
-    ext = info_file.get("ext")
-
-    if not base_lang:
-        log.warning("Warning: No se detectó el idioma base en el nombre del archivo. Configurado autodetect.")
-        base_lang = 'auto'
-
-    log.info(f"Idioma base configurado: {base_lang}")
-    log.info(f"Las nuevas traducciones se guardarán en: {file_dir}")
-
-    # Pasar el directorio como objeto Path a Translator
-    # translator = Translator(file_dir)
-    # translator.auto_translate(base=base_lang, langs='all' if 'all' in args.langs else args.langs, force=args.force)
-    # print(f"Traducciones desde '{base_lang}' auto traducidas en '{file_dir}'.")
+    translator = AutoTranslate(info_file, force=args.force, overwrite=args.overwrite, args=args)
+    translator.worker()
 
 
 if __name__ == "__main__":
     import sys
 
-    # sys.argv = ["cli.py", "auto_translate", "struct_files/en.json", "--lang", "es"]
-    sys.argv = ["cli.py", "auto_translate", "struct_files/i18n.ts", "--lang", "es"]
+    # sys.argv = ["cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.json", "--lang", "es"]
+    # main()
+
+    sys.argv = [
+        "cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.json",
+        "--lang", "all",
+        "--output", "D:\Coders\ToolsTranslator\struct_files\output"
+    ]
     main()
+
+    # sys.argv = ["cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.yml", "--lang", "br"]
+    # main()
