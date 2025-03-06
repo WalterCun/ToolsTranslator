@@ -58,6 +58,7 @@ def main():
     auto_translate_parser = subparsers.add_parser("auto_translate", help="Auto translate")
     auto_translate_parser.add_argument("file", type=Path, help="Archivo JSON a traducir")
     auto_translate_parser.add_argument("--base", help="Idioma base (obligatorio si no está en el nombre del archivo)")
+    auto_translate_parser.add_argument("--output", help="Directorio de salida para los archivos de traduccion")
     auto_translate_parser.add_argument("--langs", required=True, nargs="*", help="Idiomas destino (e.g., es, en, fr)")
     auto_translate_parser.add_argument("--force", action="store_true", help="Forzar traducciones")
     auto_translate_parser.add_argument("--overwrite", action="store_true", help="Sobreescribir traducciones")
@@ -99,17 +100,20 @@ def handle_auto_translate(args):
 
     translator = AutoTranslate(info_file, force=args.force, overwrite=args.overwrite, args=args)
     translator.worker()
-    # print(f"Traducciones desde '{lang}' auto traducidas en '{file_dir}'.")
 
 
 if __name__ == "__main__":
     import sys
 
-    sys.argv = ["cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.json", "--lang", "es"]
-    main()
-
-    # sys.argv = ["cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.json", "--lang", "all"]
+    # sys.argv = ["cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.json", "--lang", "es"]
     # main()
+
+    sys.argv = [
+        "cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.json",
+        "--lang", "all",
+        "--output", "D:\Coders\ToolsTranslator\struct_files\output"
+    ]
+    main()
 
     # sys.argv = ["cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.yml", "--lang", "br"]
     # main()
