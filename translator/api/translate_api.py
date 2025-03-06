@@ -4,6 +4,7 @@ import logging
 import time
 from datetime import timedelta
 from pprint import pprint
+from typing import Optional, Dict
 from urllib.parse import urljoin
 
 import requests
@@ -87,7 +88,7 @@ class LibreTranslate:
             requests_cache.clear()
             raise Exception(f"Error al realizar la solicitud: {str(e)}")
 
-    def get_supported_languages(self, lang_base):
+    def get_supported_languages(self, lang_base, to_list: bool = False):
         """
         Retrieves a list of supported languages for translation based on the base language provided.
 
@@ -104,14 +105,17 @@ class LibreTranslate:
         """
         try:
             response = self._request_supported_languages()
-            languages = {}
-            languages_filter = {}
+            languages: Dict = {}
+            targets: Optional[list] = None
             for i in response:
                 languages[i.get('name')] = i.get('code')  # Construimos el diccionario languages
                 if lang_base == i.get('code'):  # Comprobamos si coincide con lang_base
-                    targets = i.get('targets', [])  # Obtenemos los targets
-                    languages_filter = {k: v for k, v in languages.items() if v in targets}
-            return languages_filter or languages
+                    targets = i.get('targets', [])
+            if targets:
+                languages = {k: v for k, v in languages.items() if v in targets}
+            if to_list:
+                return list(languages.values())
+            return languages
         except Exception as e:
             log.error(f"Error al obtener idiomas: {str(e)}")
             return []
@@ -159,24 +163,22 @@ class LibreTranslate:
         #         log.error(f"Excepción en la traducción: {str(e)}")
         #     retry += 1
         try:
-            with requests_cache.disabled():
-                response = requests.post(self.url_translate, json=payload)
-                if response.status_code == 200:
-                    translated_text = response.json().get("translatedText", "")
-                    if not translated_text:
-                        log.error("La respuesta del servidor no contiene la traducción.")
-                    return translated_text
-                else:
-                    log.error(f"Error: {response.status_code}, {response.content}")
+            # with requests_cache.disabled():
+            response = requests.post(self.url_translate, json=payload)
+            if response.status_code == 200:
+                translated_text = response.json().get("translatedText", "")
+                if not translated_text:
+                    log.error("La respuesta del servidor no contiene la traducción.")
+                return translated_text
+            else:
+                log.error(f"Error: {response.status_code}, {response.content}")
         except requests.RequestException as e:
             log.error(f"Error en la traducción: {e}")
-            raise Exception(f"Error al traducir el texto: {str(e)}")
+            return ""
 
-        return ""
-
-
-if __name__ == '__main__':
-    lt = LibreTranslate()
-    print(lt.get_supported_languages("es"))
-    print(lt.get_supported_languages("all"))
-    print(lt.get_supported_languages("auto"))
+# if __name__ == '__main__':
+# lt = LibreTranslate()
+# print(lt.get_supported_languages("es"))
+# print(lt.get_supported_languages("all"))
+# print(lt.get_supported_languages("auto"))
+# print(lt.translate("Hola Mundo de la programación", "es", "en"))
