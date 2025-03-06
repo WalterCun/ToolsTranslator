@@ -12,6 +12,7 @@ from translator.models.info_file import InfoFile
 
 log = logging.getLogger(__name__)
 config_logging(log, logging.INFO)
+# config_logging(log, logging.DEBUG)
 
 
 class AutoTranslate:
@@ -91,16 +92,20 @@ class AutoTranslate:
         else:
             raise ValueError(f"Formato no soportado {self.ext}")
 
-    def json_worker(self, lang_work: list or str, lang_file: str, force: bool, overwrite: bool):
+    def json_worker(self, lang_work: list or str, lang_file: str, output_dir: str or Path, force: bool,
+                    overwrite: bool):
         base_data = self.extract_parse_file()
 
         translated = []
 
         for l in lang_work:
             log.info(f'Traducir >> {l}')
-            output_file = self.translations_dir / f"{l}.json"
+
+            path_output = Path(output_dir or self.translations_dir)
+            path_output.mkdir(parents=True, exist_ok=True)
+
+            output_file = (path_output or self.translations_dir) / f"{l}.json"
             new_data = self.extract_parse_file(output_file)
-            print(new_data)
             for i in range(len(base_data)):
                 base_parse, base_value = base_data[i]
                 if not new_data:
@@ -108,16 +113,16 @@ class AutoTranslate:
                 else:
                     out_paser, out_value = new_data[i]
 
-                if base_parse == out_paser and (not overwrite or not force) and out_value is not None:
-                    log.debug(f'{base_parse} == {out_paser} and not {overwrite} or {force} and {out_value} is not None')
-                    log.info(f'{base_parse} ({lang_file}/{l}) => {out_value}')
-                    translated.append((base_parse, out_value))
-                elif base_parse != out_paser and (overwrite or force):
+                if base_parse != out_paser or overwrite or force:
                     log.debug(f'{base_parse} == {out_paser} and not {overwrite} or {force}')
                     translate = self.api.translate(base_value, lang_file, l)
                     log.info(f'{base_parse} ({lang_file}/{l}) => {translate}')
                     translated.append((base_parse, translate))
+                elif base_parse == out_paser and (not overwrite or not force) and out_value is not None:
+                    log.info(f'{base_parse} ({lang_file}/{l}) => {out_value}')
+                    translated.append((base_parse, out_value))
 
+                # return
             json_instance = JSON(output_file or self.path)
             data = json_instance.deserializar_json(translated)
             json_instance.save_json_file(data)
@@ -147,9 +152,9 @@ class AutoTranslate:
         lang_file = base or self.args.base or self.name if self.name in self.language_support else self.lang_work
         lang_work = (langs if langs in self.language_support else None) or self.args.langs or self.lang_work
         if 'all' in lang_work:
-            lang_work = self.language_support
+            lang_work = [lang for lang in self.language_support if lang != lang_file]
 
         if self.ext == 'json':
-            self.json_worker(lang_work, lang_file, force, overwrite)
+            self.json_worker(lang_work, lang_file, self.args.output, force, overwrite)
         else:
             log.error(f"Formato no soportado {self.ext}, notificar al administrador (waltercunbustamante@gmail.com)")
