@@ -2,9 +2,13 @@ import logging
 from argparse import Namespace
 from pathlib import Path
 
+from yaml import serialize
+
 from config_logging import config_logging
+from structs.json import JSON
+from structs.yaml import YAML
 from translate_api import LibreTranslate
-from translator.structs.info_file import InfoFile
+from translator.models.info_file import InfoFile
 
 log = logging.getLogger(__name__)
 config_logging(log, logging.INFO)
@@ -57,8 +61,7 @@ class AutoTranslate:
         :type overwrite: bool
         """
         self.api = LibreTranslate()
-        self.language_support = self.api.get_supported_languages(args.base or meta.lang or 'all')
-
+        self.language_support = self.api.get_supported_languages(args.base or meta.lang or 'all', True)
         self.path = meta.path
         self.translations_dir = Path(meta.directory)
         if self.translations_dir.exists():
@@ -71,6 +74,53 @@ class AutoTranslate:
 
         self.force = force
         self.overwrite = overwrite
+
+    def extract_parse_file(self, path=None) -> list[tuple[str, str]] or None:
+        if not Path(path or self.path).exists():
+            return None
+        if self.ext == 'json':
+            json_instance = JSON(path or self.path)
+            data = json_instance.get_content_json_file()
+            return json_instance.serializer_json(data)
+        elif self.ext == 'yaml' or self.ext == 'yml':
+            yml_instance = YAML(path or self.path)
+            data = yml_instance.get_content_yaml_file()
+            return yml_instance.serializer_yaml(data)
+        elif self.ext == 'ts':
+            pass
+        else:
+            raise ValueError(f"Formato no soportado {self.ext}")
+
+    def json_worker(self, lang_work: list or str, lang_file: str, force: bool, overwrite: bool):
+        base_data = self.extract_parse_file()
+
+        translated = []
+
+        for l in lang_work:
+            log.info(f'Traducir >> {l}')
+            output_file = self.translations_dir / f"{l}.json"
+            new_data = self.extract_parse_file(output_file)
+            print(new_data)
+            for i in range(len(base_data)):
+                base_parse, base_value = base_data[i]
+                if not new_data:
+                    out_paser, out_value = None, None
+                else:
+                    out_paser, out_value = new_data[i]
+
+                if base_parse == out_paser and (not overwrite or not force) and out_value is not None:
+                    log.debug(f'{base_parse} == {out_paser} and not {overwrite} or {force} and {out_value} is not None')
+                    log.info(f'{base_parse} ({lang_file}/{l}) => {out_value}')
+                    translated.append((base_parse, out_value))
+                elif base_parse != out_paser and (overwrite or force):
+                    log.debug(f'{base_parse} == {out_paser} and not {overwrite} or {force}')
+                    translate = self.api.translate(base_value, lang_file, l)
+                    log.info(f'{base_parse} ({lang_file}/{l}) => {translate}')
+                    translated.append((base_parse, translate))
+
+            json_instance = JSON(output_file or self.path)
+            data = json_instance.deserializar_json(translated)
+            json_instance.save_json_file(data)
 
     def worker(self, base: str = None, langs: list or str = None, force: bool = False, overwrite: bool = False):
         """
@@ -94,11 +144,12 @@ class AutoTranslate:
         :return: The result of the worker operation or None if the process terminates early.
         :rtype: Any
         """
-
-        # print(self.args)
-        print(self.language_support)
-
         lang_file = base or self.args.base or self.name if self.name in self.language_support else self.lang_work
-        lang_work = langs if langs in self.language_support else self.args.langs or self.lang_work
+        lang_work = (langs if langs in self.language_support else None) or self.args.langs or self.lang_work
+        if 'all' in lang_work:
+            lang_work = self.language_support
 
-        print(f"Lang_file: {lang_file} lang_work: {lang_work}")
+        if self.ext == 'json':
+            self.json_worker(lang_work, lang_file, force, overwrite)
+        else:
+            log.error(f"Formato no soportado {self.ext}, notificar al administrador (waltercunbustamante@gmail.com)")
