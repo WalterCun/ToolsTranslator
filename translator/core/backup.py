@@ -5,9 +5,10 @@ import json
 import logging
 from pathlib import Path
 
-from api.translate_api import LibreTranslate
 from config_logging import config_logging
-from structs import get_content_json_file, serializer_json
+from structs.json import JSON
+# from structs import get_content_json_file, serializer_json
+from translate_api import LibreTranslate
 
 log = logging.getLogger(__name__)
 config_logging(log, logging.INFO)
@@ -89,8 +90,8 @@ class Translator:
     def _load_struct_translate(self, base_file: str = None) -> None:
         print(self.meta)
         if self.meta.get('ext') == 'json':
-            json_data = get_content_json_file(base_file or self.meta.get('path'))
-            extracted_texts = serializer_json(json_data)
+            json_data = JSON.get_content_json_file(base_file or self.meta.get('path'))
+            extracted_texts = JSON.serializer_json(json_data)
             for path, text in extracted_texts:
                 print(f"Ruta: {path} -> {text}")
         elif self.meta.get('ext') == 'yaml':
