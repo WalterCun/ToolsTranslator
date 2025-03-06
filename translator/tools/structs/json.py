@@ -113,8 +113,11 @@
 
 
 import json
+import logging
+from pathlib import Path
 from typing import Union, Dict, List, Tuple
 
+log = logging.getLogger(__name__)
 
 class JSON:
     """
@@ -208,7 +211,7 @@ class JSON:
 
         return reconstructed
 
-    def get_content_json_file(self, file_path: str = None) -> Union[Dict, List]:
+    def get_content_json_file(self, file_path: str or Path = None) -> Union[Dict, List]:
         """
         Carga el contenido de un archivo JSON y lo convierte en un diccionario o lista de Python.
 
@@ -224,7 +227,7 @@ class JSON:
                 data = json.load(file)
             return data
         except Exception as e:
-            print(f"Error al cargar el archivo JSON: {e}")
+            log.error(f"Error al cargar el archivo JSON: {e}")
             raise
 
     def save_json_file(self, data: Union[Dict, List], file_path: str = None):
@@ -241,9 +244,9 @@ class JSON:
         try:
             with open(file_path, "w", encoding="utf-8") as file:
                 json.dump(data, file, indent=4, ensure_ascii=False)
-            print(f"El archivo JSON se guardó correctamente en '{file_path}'.")
+            log.warning(f"El archivo JSON se guardó correctamente en '{file_path}'.")
         except Exception as e:
-            print(f"Error al guardar el archivo JSON: {e}")
+            log.error(f"Error al guardar el archivo JSON: {e}")
             raise
 
 
@@ -253,8 +256,8 @@ if __name__ == "__main__":
 
     # Cargar datos desde un archivo JSON
     datos = gestor_json.get_content_json_file()
-    print("Data:         ", datos)
+    log.info("Data:         ", datos)
     serializer_json = gestor_json.serializer_json(datos)
-    print("Serializar:   ", serializer_json)
+    log.info("Serializar:   ", serializer_json)
     deserializer_json = JSON.deserializar_json(serializer_json)
-    print("Deserializado:", deserializer_json)
+    log.info("Deserializado:", deserializer_json)
