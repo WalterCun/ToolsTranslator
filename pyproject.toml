@@ -1,16 +1,44 @@
-[project]
-name = "toolstranslator"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires = ["setuptools", "wheel"]
+[build-system]
+requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
-requires-python = ">=3.10"
 
+[project]
+name = "translation-tools"
+version = "0.1.0"
+description = "Una librería de soporte para traducir archivos i18n."
+readme = "README.md"
+authors = [{ name = "Walter Cun Bustamante", email = "waltercunbustamante@gmail.com" }]
+license = { text = "MIT" }
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
 dependencies = [
     "pydantic-settings>=2.8.0",
     "pyyaml>=6.0.2",
     "requests>=2.32.3",
     "requests-cache>=1.2.1",
-    "setuptools>=75.8.2",
+    "setuptools>=75.8.2"
 ]
+
+[tool.setuptools.packages.find]
+where = ["translator"]
+exclude = ["tests*", "docs*", 'struct_files*','examples*']
+
+[dependency-groups]
+dev = [
+    "build>=1.2.2.post1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "flake8"
+]
+
+[project.urls]
+Homepage = "https://github.com/waltercun/ToolsTranslator"
+Repository = "https://github.com/waltercun/ToolsTranslator"

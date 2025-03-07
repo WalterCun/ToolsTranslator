@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 # Configuración de la caché usando SQLite (persistente)
 requests_cache.install_cache(
-    str(settings.BASE_DIR / "translate_cache"),  # Nombre de la base de datos SQLite para la caché
+    str(settings.BASE_DIR / "translate_cache.db"),  # Nombre de la base de datos SQLite para la caché
     expire_after=timedelta(days=1)
 )
 
