@@ -3,7 +3,7 @@ import logging
 import re
 from pathlib import Path
 
-from config_logging import config_logging
+from tools.config_logging import config_logging
 from translator.core.autotranslate import AutoTranslate
 from translator.models.info_file import InfoFile
 
@@ -54,7 +54,7 @@ def main():
     add_parser.add_argument("--lang", help="El idioma (e.g., es, en, fr)", default="es")
 
     # Subcomando para traducción automática
-    auto_translate_parser = subparsers.add_parser("auto_translate", help="Auto translate")
+    auto_translate_parser = subparsers.add_parser("auto-translate", help="Auto translate")
     auto_translate_parser.add_argument("file", type=Path, help="Archivo JSON a traducir")
     auto_translate_parser.add_argument("--base", help="Idioma base (obligatorio si no está en el nombre del archivo)")
     auto_translate_parser.add_argument("--output", help="Directorio de salida para los archivos de traduccion")
@@ -67,7 +67,7 @@ def main():
     if args.command == "add":
         # handle_add_text(args
         pass
-    elif args.command == "auto_translate":
+    elif args.command == "auto-translate":
         handle_auto_translate(args)
 
 
@@ -101,19 +101,27 @@ def handle_auto_translate(args):
     translator.worker()
 
 
+# if __name__ == '__main__':
+#     main()
+
 if __name__ == "__main__":
-    # import sys
-    #
-    # # sys.argv = ["cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.json", "--lang", "es"]
-    # # main()
-    #
+    import sys
+
+    sys.argv = [
+        "translator",
+        "auto-translate", "D:\Coders\ToolsTranslator\struct_files\en.json",
+        "--lang", "es",
+        '--output', 'D:\Coders\ToolsTranslator\struct_files\output',
+    ]
+    main()
+
     # sys.argv = [
     #     "cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.json",
     #     "--lang", "all",
     #     "--output", "D:\Coders\ToolsTranslator\struct_files\output",
     #     "--overwrite"
     # ]
-    main()
-
+    # main()
+    #
     # sys.argv = ["cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.yml", "--lang", "br"]
     # main()
