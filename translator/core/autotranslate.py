@@ -4,17 +4,15 @@ from pathlib import Path
 from time import sleep
 from typing import List, Tuple
 
-from config_logging import config_logging
-from structs.json import JSON
-from structs.yaml import YAML
-from translate_api import LibreTranslate
-from translator.models.info_file import InfoFile
+from tools.config_logging import config_logging
+from tools.structs.json import JSON
+from tools.structs.yaml import YAML
+from api.translate_api import LibreTranslate
+from models.info_file import InfoFile
 
 log = logging.getLogger(__name__)
-config_logging(log, logging.INFO)
+config_logging(log, logging.WARNING)
 
-
-# config_logging(log, logging.DEBUG)
 
 class AutoTranslate:
     """
@@ -79,26 +77,11 @@ class AutoTranslate:
         self.overwrite = overwrite
 
     def extract_parse_file(self, path=None, to_dict: bool = False) -> list[tuple[str, str]] or dict or None:
-        # if not Path(path or self.path).exists():
-        #     return {} if to_dict else []
+
         file_path = Path(path) if path else Path(self.path)
         if not file_path.exists():
             return {} if to_dict else []
 
-        # if self.ext == 'json':
-        #     json_instance = JSON(path or self.path)
-        #     data = json_instance.get_content_json_file()
-        #     if to_dict:
-        #         return {k: v for k, v in json_instance.serializer_json(data)}
-        #     return json_instance.serializer_json(data)
-        # elif self.ext == 'yaml' or self.ext == 'yml':
-        #     yml_instance = YAML(path or self.path)
-        #     data = yml_instance.get_content_yaml_file()
-        #     return yml_instance.serializer_yaml(data)
-        # elif self.ext == 'ts':
-        #     pass
-        # else:
-        #     raise ValueError(f"Formato no soportado {self.ext}")
         if self.ext.lower() == 'json':
             json_instance = JSON(str(file_path))
             data = json_instance.get_content_json_file()
@@ -116,7 +99,7 @@ class AutoTranslate:
 
     def json_worker(self, lang_work: list or str, lang_file: str, output_dir: str or Path, force: bool,
                     overwrite: bool):
-        # base_data = self.extract_parse_file(to_dict=True)
+
         base_data = self.extract_parse_file(to_dict=True)
         if not isinstance(lang_work, list):
             lang_work = [lang_work]
@@ -124,36 +107,6 @@ class AutoTranslate:
         path_output = Path(output_dir) if output_dir else self.translations_dir
         path_output.mkdir(parents=True, exist_ok=True)
 
-        # for l in lang_work:
-        #     log.info(f'Traducir >> {l}')
-        #     translated = []
-        #
-        #     path_output = Path(output_dir or self.translations_dir)
-        #     path_output.mkdir(parents=True, exist_ok=True)
-        #
-        #     output_file = (path_output or self.translations_dir) / f"{l}.json"
-        #     new_data = self.extract_parse_file(output_file, to_dict=True)
-        #     # for i in range(len(base_data)):
-        #     for i in base_data.keys():
-        #         base_parse, base_value = i, base_data.get(i)
-        #         out_paser, out_value = i, new_data.get(i)
-        #         # print(f'base_parse: {base_parse} \nbase_value: {base_value} \nout_paser: {out_paser} '
-        #         #       f'\nout_value: {out_value} \noverwrite {overwrite} \nforce {force}')
-        #         if base_parse != out_paser or overwrite or force:
-        #             log.debug(f'{base_parse} == {out_paser} and not {overwrite} or {force}')
-        #             translate = self.api.translate(base_value, lang_file, l)
-        #             log.info(f'{base_parse} ({lang_file}/{l}) => {translate}')
-        #             translated.append((base_parse, translate))
-        #         elif base_parse == out_paser and (not overwrite or not force) and out_value is not None:
-        #             log.info(f'{base_parse} ({lang_file}/{l}) => {out_value}')
-        #             translated.append((base_parse, out_value))
-        #         elif base_parse == out_paser and (not overwrite or not force) and out_value is None:
-        #             log.info(f'{base_parse} ({lang_file}/{l}) => {out_value}')
-        #             translated.append((base_parse, out_value))
-        #         # return
-        #     json_instance = JSON(str(output_file))
-        #     data = json_instance.deserializar_json(translated)
-        #     json_instance.save_json_file(data)
         for lang in lang_work:
             log.info(f'Traduciendo al idioma: {lang}')
             translated: List[Tuple[str, str]] = []
@@ -189,7 +142,7 @@ class AutoTranslate:
             except Exception as e:
                 log.error(f"Error al guardar {output_file}: {e}")
 
-            sleep(5)
+            log.info('Finish convert languages packages......')
 
     def worker(self, base: str = None, langs: list or str = None):
         """
@@ -213,15 +166,7 @@ class AutoTranslate:
         :return: The result of the worker operation or None if the process terminates early.
         :rtype: Any
         """
-        # lang_file = base or self.args.base or self.name if self.name in self.language_support else self.lang_work
-        # lang_work = (langs if langs in self.language_support else None) or self.args.langs or self.lang_work
-        # if 'all' in lang_work:
-        #     lang_work = [lang for lang in self.language_support if lang != lang_file]
-        #
-        # if self.ext == 'json':
-        #     self.json_worker(lang_work, lang_file, self.args.output, self.force, self.overwrite)
-        # else:
-        #     log.error(f"Formato no soportado {self.ext}, notificar al administrador (waltercunbustamante@gmail.com)")
+
         if base:
             lang_file = base
         elif self.args and getattr(self.args, 'base', None):
@@ -243,16 +188,11 @@ class AutoTranslate:
             if isinstance(self.args.langs, list) and 'all' in self.args.langs:
                 lang_work = [lang for lang in self.language_support if lang != lang_file]
             elif isinstance(self.args.langs, list):
-                lang_work = [self.args.langs] if self.args.langs in self.language_support else []
+                lang_work = [x for x in self.args.langs if x in self.language_support]
             else:
                 lang_work = []
-
         else:
             lang_work = [self.lang_work] if isinstance(self.lang_work, str) else self.lang_work
-
-        # Si se especifica "all", se traducen todos menos el idioma base
-        if 'all' in lang_work:
-            lang_work = [lang for lang in self.language_support if lang != lang_file]
 
         if not lang_work:
             log.error("No se especificaron idiomas válidos para trabajar.")
