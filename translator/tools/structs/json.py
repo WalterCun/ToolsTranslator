@@ -251,13 +251,13 @@ class JSON:
 
 
 # Ejemplo de uso de la clase GestionarJSON
-if __name__ == "__main__":
-    gestor_json = JSON(r"/struct_files\en.json")
-
-    # Cargar datos desde un archivo JSON
-    datos = gestor_json.get_content_json_file()
-    log.info("Data:         ", datos)
-    serializer_json = gestor_json.serializer_json(datos)
-    log.info("Serializar:   ", serializer_json)
-    deserializer_json = JSON.deserializar_json(serializer_json)
-    log.info("Deserializado:", deserializer_json)
+# if __name__ == "__main__":
+#     gestor_json = JSON(r"/struct_files\en.json")
+#
+#     # Cargar datos desde un archivo JSON
+#     datos = gestor_json.get_content_json_file()
+#     log.info("Data:         ", datos)
+#     serializer_json = gestor_json.serializer_json(datos)
+#     log.info("Serializar:   ", serializer_json)
+#     deserializer_json = JSON.deserializar_json(serializer_json)
+#     log.info("Deserializado:", deserializer_json)
