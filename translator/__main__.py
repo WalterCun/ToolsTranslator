@@ -107,10 +107,25 @@ def handle_auto_translate(args):
 if __name__ == "__main__":
     import sys
 
+    # sys.argv = [
+    #     "translator",
+    #     "auto-translate", "D:\Coders\ToolsTranslator\struct_files\en.json",
+    #     "--lang", "es"
+    # ]
+    # main()
+
+    # sys.argv = [
+    #     "translator",
+    #     "auto-translate", "D:\Coders\ToolsTranslator\struct_files\en.json",
+    #     "--lang", "es",
+    #     '--output', 'D:\Coders\ToolsTranslator\struct_files\output',
+    # ]
+    # main()
+
     sys.argv = [
         "translator",
         "auto-translate", "D:\Coders\ToolsTranslator\struct_files\en.json",
-        "--lang", "es",
+        "--lang", "es", "en", "fr",
         '--output', 'D:\Coders\ToolsTranslator\struct_files\output',
     ]
     main()
