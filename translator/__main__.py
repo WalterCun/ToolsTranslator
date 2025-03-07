@@ -5,7 +5,6 @@ from pathlib import Path
 
 from config_logging import config_logging
 from translator.core.autotranslate import AutoTranslate
-# from translator.core.backup import Translator
 from translator.models.info_file import InfoFile
 
 log = logging.getLogger(__name__)
@@ -103,16 +102,17 @@ def handle_auto_translate(args):
 
 
 if __name__ == "__main__":
-    import sys
-
-    # sys.argv = ["cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.json", "--lang", "es"]
-    # main()
-
-    sys.argv = [
-        "cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.json",
-        "--lang", "all",
-        "--output", "D:\Coders\ToolsTranslator\struct_files\output"
-    ]
+    # import sys
+    #
+    # # sys.argv = ["cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.json", "--lang", "es"]
+    # # main()
+    #
+    # sys.argv = [
+    #     "cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.json",
+    #     "--lang", "all",
+    #     "--output", "D:\Coders\ToolsTranslator\struct_files\output",
+    #     "--overwrite"
+    # ]
     main()
 
     # sys.argv = ["cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.yml", "--lang", "br"]
