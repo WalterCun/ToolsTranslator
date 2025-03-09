@@ -1,3 +1,8 @@
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+""" translator/tools/verify_docker_tools.py """
+
 import platform
 import subprocess
 import sys
