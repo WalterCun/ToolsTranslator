@@ -114,6 +114,12 @@
 
 import json
 import logging
+
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+""" translator/parses/json.py """
+
 from pathlib import Path
 from typing import Union, Dict, List, Tuple
 
