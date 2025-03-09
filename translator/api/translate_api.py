@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-""" translate_api.py """
+# -*- coding: utf-8 -*-
+
+""" translator/api/translate_api.py """
+
 import logging
-import time
 from datetime import timedelta
-from pprint import pprint
 from typing import Optional, Dict
 from urllib.parse import urljoin
 
@@ -18,7 +19,7 @@ log = logging.getLogger(__name__)
 
 # Configuración de la caché usando SQLite (persistente)
 requests_cache.install_cache(
-    str(settings.BASE_DIR / "translate_cache.db"),  # Nombre de la base de datos SQLite para la caché
+    str(settings.BASE_DIR / "TranslateApi.db"),  # Nombre de la base de datos SQLite para la caché
     expire_after=timedelta(days=1)
 )
 
