@@ -1,3 +1,8 @@
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+""" translator/tools/docker_tools.py """
+
 import subprocess
 
 
