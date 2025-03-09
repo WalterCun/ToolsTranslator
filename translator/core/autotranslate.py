@@ -1,12 +1,16 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+""" translator/core/autotranslate.py """
+
 import logging
 from argparse import Namespace
 from pathlib import Path
-from time import sleep
 from typing import List, Tuple
 
+from parses.yaml import YAML
 from tools.config_logging import config_logging
-from tools.structs.json import JSON
-from tools.structs.yaml import YAML
+from parses import JSON
 from api.translate_api import LibreTranslate
 from models.info_file import InfoFile
 
@@ -16,30 +20,37 @@ config_logging(log, logging.WARNING)
 
 class AutoTranslate:
     """
-    Class responsible for automating translation operations using the LibreTranslate
-    API. It organizes file paths, manages input parameters, and ensures translation
-    processes align with the provided metadata. This class also facilitates clean
-    handling of directory structures and translation configurations.
+    Represents a class for automated translation tasks leveraging the LibreTranslate API.
+    This class provides functionality for organizing translation metadata, managing file
+    paths, handling supported languages, and processing translation operations based on
+    various input conditions.
 
-    :ivar api: Instance of the LibreTranslate API handler for handling translation
-        requests and results.
-    :ivar path: File path for the target file to be translated.
+    It primarily focuses on translating JSON-based content and supports additional formats
+    like YAML and TS with a flexible mechanism to specify translation settings.
+
+    :ivar api: Provides access to the LibreTranslate API methods and functions.
+    :type api: LibreTranslate
+    :ivar language_support: List of languages supported by the LibreTranslate API for the
+        given metadata or argument configuration.
+    :type language_support: List[str]
+    :ivar path: The primary path of the file to be translated.
     :type path: str
-    :ivar translations_dir: Directory where translation results will be stored. If
-        not present, it will be created.
+    :ivar translations_dir: Directory path where translations will be stored or fetched.
     :type translations_dir: Path
-    :ivar lang_work: Language to work on during translation. Defaults to 'all' if
-        no language is specified.
-    :type lang_work: str
-    :ivar name: Name of the file to be translated.
+    :ivar lang_work: Specifies the default working language or "all" to target multiple
+        languages.
+    :type lang_work: str or List[str]
+    :ivar name: The name attribute derived from the metadata pertaining to the input file.
     :type name: str
-    :ivar ext: Extension of the file to be translated.
+    :ivar ext: The extension of the specific translation file format to be processed.
     :type ext: str
-    :ivar force: Indicates whether to forcibly overwrite certain conditions during
-        translation operations.
+    :ivar args: Parsed Namespace object from argparse, providing CLI input options.
+    :type args: Namespace
+    :ivar force: Boolean flag to determine if translation operations overwrite constraints
+        by force.
     :type force: bool
-    :ivar overwrite: Indicates whether existing data should be overwritten during
-        the translation process.
+    :ivar overwrite: Boolean flag to enable overwriting previously existing translation
+        data or files.
     :type overwrite: bool
     """
 
