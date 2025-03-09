@@ -1,3 +1,8 @@
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+""" translator/tools/libretranslate_service.py """
+
 import os
 import subprocess
 import logging
