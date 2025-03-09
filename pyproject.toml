@@ -11,29 +11,64 @@ authors = [{ name = "Walter Cun Bustamante", email = "waltercunbustamante@gmail.
 license = { text = "MIT" }
 requires-python = ">=3.10"
 classifiers = [
-    "Programming Language :: Python :: 3",
+    # Lenguaje de programación compatible
+    #    "Programming Language :: Python :: 3",
+    #    "Programming Language :: Python :: 3.8",
+    #    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    #    "Programming Language :: Python :: 3.11",
+
+    # Licencia
     "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent"
+    # Sistema operativo compatible
+    "Operating System :: OS Independent",
+    # Estado de desarrollo
+    # Alternativas:
+    # "Development Status :: 1 - Planning"
+    # "Development Status :: 2 - Pre-Alpha"
+    # "Development Status :: 3 - Alpha"
+    "Development Status :: 4 - Beta",
+    # "Development Status :: 5 - Production/Stable"
+    # "Development Status :: 6 - Mature"
+
+    # Audiencia objetivo
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    # Alternativas:
+    # "Intended Audience :: Education" (Proyectos educativos)
+    # "Intended Audience :: Information Technology" (Proyectos técnicos)
+
+    # Temas relacionados
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Internationalization",
+    "Topic :: Utilities",
+    "Topic :: Text Processing :: Linguistic",
+    # Contexto de uso
+    "Environment :: Console",
+    # "Environment :: Web Environment" (si es una app web)
+    # "Environment :: Desktop" (si es escritorio)
+
+    # Soporte para estándares de internacionalización
+    "Natural Language :: English",
+    "Natural Language :: Spanish",
 ]
 dependencies = [
     "pydantic-settings>=2.8.0",
     "setuptools>=75.8.2"
 ]
 
+keywords = ["traducción", "i18n", "automatización"]
+
 [tool.setuptools.packages.find]
 where = ["translator"]
 exclude = ["tests*", "docs*", 'struct_files*', 'examples*']
-
-[dependency-groups]
-dev = [
-    "build>=1.2.2.post1",
-]
 
 [project.optional-dependencies]
 dev = [
     "pytest",
     "black",
-    "flake8"
+    "flake8",
+    "build>=1.2.2.post1",
 ]
 autotranslate = [
     "requests>=2.32.3",
