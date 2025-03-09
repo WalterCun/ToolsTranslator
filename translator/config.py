@@ -1,9 +1,10 @@
-#!/usr/bin/env python3
-""" config.py """
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+""" translator/config.py """
+
 import logging
-from datetime import timedelta
 from pathlib import Path
-from typing import Literal
 
 from pydantic_settings import BaseSettings
 
@@ -37,6 +38,9 @@ class Settings(BaseSettings):
         # "Accept-Language": "en-US,en;q=0.9",
         "Content-Type": "application/json"
     }
+
+
+
 
     class Config:
         """
