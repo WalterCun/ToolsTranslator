@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 
 from config_logging import config_logging
-from structs.json import JSON
+from parses import JSON
 # from structs import get_content_json_file, serializer_json
 from translate_api import LibreTranslate
 
