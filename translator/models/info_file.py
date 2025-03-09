@@ -1,5 +1,9 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+""" translator/models/info_file.py """
+
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Optional, Any, TypeVar, Type, cast
 
 __all__ = ["InfoFile"]
@@ -11,21 +15,23 @@ def from_str(x: Any) -> str:
     assert isinstance(x, str)
     return x
 
-
+# noinspection Assert
 def from_none(x: Any) -> Any:
     assert x is None
     return x
 
 
+# noinspection TryExceptPass
 def from_union(fs, x):
     for f in fs:
         try:
             return f(x)
-        except:
+        except Exception:
             pass
-    assert False
+    raise False
 
 
+# noinspection Assert
 def to_class(c: Type[T], x: Any) -> dict:
     assert isinstance(x, c)
     return cast(Any, x).to_dict()
