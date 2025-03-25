@@ -5,7 +5,6 @@
 
 import logging
 
-from config import settings
 from main import main
 
 logging.basicConfig(
@@ -13,7 +12,6 @@ logging.basicConfig(
     format="[%(asctime)s] - [%(name)s] - [%(levelname)s] -> %(message)s",  # Formato del log
     handlers=[
         logging.StreamHandler(),  # Enviar mensajes al terminal
-        logging.FileHandler(settings.BASE_DIR / "logs/translate-tools.log", mode="a") if settings.DEBUG else ...
     ]
 )
 
