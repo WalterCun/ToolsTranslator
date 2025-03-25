@@ -14,6 +14,7 @@ from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 from translator.config import settings
+from verify_docker_tool import ensure_docker
 
 log = logging.getLogger(__name__)
 
@@ -119,7 +120,8 @@ class LibreTranslate:
             return languages
         except Exception as e:
             log.error(f"Error al obtener idiomas: {str(e)}")
-            return []
+            ensure_docker()
+            return self.get_supported_languages( lang_base, to_list)
 
     def translate(self, text, source, target, retry=0):
         """

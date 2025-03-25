@@ -8,6 +8,8 @@ import subprocess
 import sys
 import os
 import logging
+from time import sleep
+
 from tools.docker_tool import is_docker_installed, is_docker_running
 
 # Configuración de logs
@@ -92,6 +94,7 @@ def ensure_docker():
     elif not is_docker_running():
         logging.warning("Docker está instalado pero no en ejecución.")
         start_docker()
+        sleep(10)
     else:
         logging.info("Docker está instalado y en ejecución.")
 
