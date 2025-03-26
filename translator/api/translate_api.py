@@ -98,6 +98,7 @@ class LibreTranslate:
         Otherwise, if the base language is set to automatic detection ("auto"), it adds all
         available language codes to a set and finally returns them as a list.
 
+        :param to_list:
         :param lang_base: Base language code to filter or retrieve available target languages.
                           Use "auto" for automatic detection of all available languages.
         :type lang_base: str
