@@ -1,41 +1,10 @@
-# from typing import List, Tuple, Dict, Union
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
-# import yaml
-#
-# from structs import serializer_json, deserializar_json
-#
-#
-# def serializer_yaml(data: Union[Dict, List], path="") -> List[Tuple[str, str]]:
-#     return serializer_json(data, path)
-#
-#
-# def deserializer_yaml(entries: List[Tuple[str, str]]) -> dict:
-#     return deserializar_json(entries)
-#
-#
-# def get_content_yaml_file(file_path: str) -> dict:
-#     """
-#     Carga el contenido de un archivo YAML y lo convierte en un diccionario de Python.
-#
-#     :param file_path: Ruta del archivo YAML.
-#     :return: Diccionario con los datos cargados.
-#     """
-#     with open(file_path, "r", encoding="utf-8") as file:
-#         data = yaml.safe_load(file)
-#     return data
-#
-#
-# def save_yaml_file(data: dict, file_path: str):
-#     try:
-#         with open(file_path, "w", encoding="utf-8") as file:
-#             # Usamos yaml.dump para guardar el diccionario en formato YAML
-#             yaml.dump(data, file, sort_keys=False, allow_unicode=True)
-#         print(f"El diccionario se guardó correctamente en '{file_path}'.")
-#     except Exception as e:
-#         print(f"Error al guardar el diccionario en YAML: {e}")
+""" translator/parses/yaml.py """
 
+from typing import Union, List, Dict
 
-from typing import Union, List, Tuple, Dict
 import yaml
 
 
@@ -63,7 +32,7 @@ class YAML:
         :return: Lista de tuplas serializada.
         """
         # Simula lógica de serialización usando un serializer externo.
-        from structs.json import JSON
+        from parses.json import JSON
         return JSON.serializer_json(data, path)
 
     @staticmethod
@@ -74,7 +43,7 @@ class YAML:
         :param entries: Lista de tuplas serializada.
         :return: Diccionario deserializado.
         """
-        from structs.json import JSON
+        from parses.json import JSON
         return JSON.deserializar_json(entries)
 
     def get_content_yaml_file(self, file_path: str = None) -> dict:

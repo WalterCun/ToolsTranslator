@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-""" translate_api.py """
+# -*- coding: utf-8 -*-
+
+""" translator/api/translate_api.py """
+
 import logging
-import time
 from datetime import timedelta
-from pprint import pprint
 from typing import Optional, Dict
 from urllib.parse import urljoin
 
@@ -13,12 +14,13 @@ from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 from translator.config import settings
+from verify_docker_tool import ensure_docker
 
 log = logging.getLogger(__name__)
 
 # Configuración de la caché usando SQLite (persistente)
 requests_cache.install_cache(
-    str(settings.BASE_DIR / "translate_cache"),  # Nombre de la base de datos SQLite para la caché
+    str(settings.BASE_DIR / "TranslateApi.db"),  # Nombre de la base de datos SQLite para la caché
     expire_after=timedelta(days=1)
 )
 
@@ -96,6 +98,7 @@ class LibreTranslate:
         Otherwise, if the base language is set to automatic detection ("auto"), it adds all
         available language codes to a set and finally returns them as a list.
 
+        :param to_list:
         :param lang_base: Base language code to filter or retrieve available target languages.
                           Use "auto" for automatic detection of all available languages.
         :type lang_base: str
@@ -118,7 +121,8 @@ class LibreTranslate:
             return languages
         except Exception as e:
             log.error(f"Error al obtener idiomas: {str(e)}")
-            return []
+            ensure_docker()
+            return self.get_supported_languages( lang_base, to_list)
 
     def translate(self, text, source, target, retry=0):
         """
