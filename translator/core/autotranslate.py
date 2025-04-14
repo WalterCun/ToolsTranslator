@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
 """ translator/core/autotranslate.py """
 
 import logging
@@ -8,11 +7,11 @@ from argparse import Namespace
 from pathlib import Path
 from typing import List, Tuple
 
-from parses.yaml import YAML
-from tools.config_logging import config_logging
-from parses import JSON
-from api.translate_api import LibreTranslate
-from models.info_file import InfoFile
+from translator.parses.tyaml import YAML
+from translator.tools.config_logging import config_logging
+from translator.parses.tjson import JSON
+
+from translator.models.info_file import InfoFile
 
 log = logging.getLogger(__name__)
 config_logging(log, logging.WARNING)
@@ -20,75 +19,167 @@ config_logging(log, logging.WARNING)
 
 class AutoTranslate:
     """
-    Represents a class for automated translation tasks leveraging the LibreTranslate API.
-    This class provides functionality for organizing translation metadata, managing file
-    paths, handling supported languages, and processing translation operations based on
-    various input conditions.
+    Manages translation operations, environment setup, and API usage for file translation tasks.
 
-    It primarily focuses on translating JSON-based content and supports additional formats
-    like YAML and TS with a flexible mechanism to specify translation settings.
+    This class is specifically designed to work with the LibreTranslate API and organize input
+    parameters, file paths, and directories for translation. It facilitates the handling of language
+    files, providing efficient processing and translation support for different use cases.
 
-    :ivar api: Provides access to the LibreTranslate API methods and functions.
+    :ivar api: Instance of the LibreTranslate API client, used to perform translations.
     :type api: LibreTranslate
-    :ivar language_support: List of languages supported by the LibreTranslate API for the
-        given metadata or argument configuration.
-    :type language_support: List[str]
-    :ivar path: The primary path of the file to be translated.
+    :ivar language_support: List of languages supported by the LibreTranslate API configuration.
+    :type language_support: list[str]
+    :ivar path: The file path associated with the metadata information.
     :type path: str
-    :ivar translations_dir: Directory path where translations will be stored or fetched.
+    :ivar translations_dir: Directory where the translated files are stored.
     :type translations_dir: Path
-    :ivar lang_work: Specifies the default working language or "all" to target multiple
-        languages.
-    :type lang_work: str or List[str]
-    :ivar name: The name attribute derived from the metadata pertaining to the input file.
+    :ivar lang_work: Language to work with for translations. Defaults to all languages.
+    :type lang_work: str
+    :ivar name: File name extracted from the metadata, used for processing.
     :type name: str
-    :ivar ext: The extension of the specific translation file format to be processed.
+    :ivar ext: File extension type (e.g., json, yaml, etc.).
     :type ext: str
-    :ivar args: Parsed Namespace object from argparse, providing CLI input options.
+    :ivar args: Input arguments for translation tasks, including base and language settings.
     :type args: Namespace
-    :ivar force: Boolean flag to determine if translation operations overwrite constraints
-        by force.
-    :type force: bool
-    :ivar overwrite: Boolean flag to enable overwriting previously existing translation
-        data or files.
-    :type overwrite: bool
     """
 
-    def __init__(self, meta: InfoFile, force=False, overwrite=False, args: Namespace = None):
+    def __init__(self, meta: InfoFile, args: Namespace = Namespace(base=None)):
         """
-        Initializes an instance of this class, responsible for setting up API usage,
-        file paths, translation directories, and managing input parameters. This class
-        is tailored to handle translation operations using the LibreTranslate API, and
-        it organizes the environment based on the metadata provided.
+        Initializes a new instance of the class, setting up translation API, resolving language and path
+        information, and initializing required directories.
 
-        :param meta: Metadata for the translation. Contains relevant information about
-            the file, its path, directory structure, and language details.
+        :param meta: Metadata containing file information with attributes such as lang, path, name,
+                     ext, and directory.
         :type meta: InfoFile
-        :param force: Flag that indicates whether the operation should forcibly
-            overwrite certain conditions during processing. Defaults to False.
-        :type force: bool
-        :param overwrite: Flag that indicates if existing data should be overwritten.
-            Defaults to False.
-        :type overwrite: bool
+        :param args: Namespace object containing command-line arguments with optional attributes like base.
+        :type args: Namespace
         """
+        from translator.api.translate_api import LibreTranslate
         self.api = LibreTranslate()
         self.language_support = self.api.get_supported_languages(args.base or meta.lang or 'all', True)
 
         self.path = meta.path
+
         self.translations_dir = Path(meta.directory)
-        if self.translations_dir.exists():
-            self.translations_dir.mkdir(parents=True, exist_ok=True)
+        self.translations_dir.mkdir(parents=True, exist_ok=True)
+
         self.lang_work = meta.lang or 'all'
         self.name = meta.name
         self.ext = meta.ext
 
         self.args = args
 
-        self.force = force
-        self.overwrite = overwrite
+    def _get_target_languages(self, langs, lang_file):
+        """
+        Helper method to determine the list of valid target languages.
+
+        :param langs: A list or a single string specifying the target languages.
+        :param lang_file: The base language file to exclude from target languages if 'all' is specified.
+        :return: A list of valid languages.
+        """
+        if langs:
+            if isinstance(langs, list):
+                return [lang for lang in langs if lang in self.language_support]
+            if isinstance(langs, str) and langs in self.language_support:
+                return [langs]
+            return []
+
+        if self.args and hasattr(self.args, 'langs'):
+            langs_from_args = self.args.langs
+            if isinstance(langs_from_args, list):
+                if 'all' in langs_from_args:
+                    return [lang for lang in self.language_support if lang != lang_file]
+                return [lang for lang in langs_from_args if lang in self.language_support]
+
+        if isinstance(self.lang_work, str):
+            return [self.lang_work]
+
+        return self.lang_work
+
+    def _process_language_translation(self, lang: str, lang_file: str, base_data: dict, output_file: Path, force: bool,
+                                      overwrite: bool) -> dict:
+        """
+        Processes the translation for a specific language, utilizing existing translations if available.
+
+        :param lang: The language to translate to.
+        :param lang_file: The base language file.
+        :param base_data: The base language data.
+        :param output_file: The path to the output file for this language.
+        :param force: Whether to force translation.
+        :param overwrite: Whether to overwrite existing translations.
+        :return: A dictionary containing the translated data.
+        """
+        try:
+            translated_data = self.extract_parse_file(output_file, to_dict=True)
+        except Exception as e:
+            log.info(f"No se pudo leer {output_file}, creando uno nuevo. Error: {e}")
+            translated_data = {}
+
+        for key, base_value in base_data.items():
+            existing_value = translated_data.get(key)
+            if existing_value is None or force or overwrite:
+                translation = self._translate_key(base_value, lang_file, lang, key)
+                translated_data[key] = translation
+            else:
+                log.info(f'Usando traducción existente para {key}: {existing_value}')
+
+        return translated_data
+
+    def _translate_key(self, base_value: str, lang_file: str, lang: str, key: str) -> str:
+        """
+        Translates a single key value.
+
+        :param base_value: The value to translate.
+        :param lang_file: The base language file.
+        :param lang: The target language.
+        :param key: The key being translated.
+        :return: Translated text, or None if translation fails.
+        """
+        try:
+            translated_text = self.api.translate(base_value, lang_file, lang)
+            log.info(f'{key} ({lang_file} -> {lang}): {translated_text}')
+            return translated_text
+        except Exception as e:
+            log.error(f"Error al traducir {key}: {e}")
+            return None
+
+    def _save_translated_data(self, output_file: Path, translated_data: dict):
+        """
+        Saves translated data to a JSON file.
+
+        :param output_file: The path to the file where the data will be saved.
+        :param translated_data: The dictionary containing the translated data.
+        :return: None
+        """
+        json_instance = JSON(str(output_file))
+        try:
+            json_instance.save_json_file(json_instance.deserializar_json(translated_data.items()))
+        except Exception as e:
+            log.error(f"Error al guardar {output_file}: {e}")
 
     def extract_parse_file(self, path=None, to_dict: bool = False) -> list[tuple[str, str]] or dict or None:
+        """
+        Extracts and parses a file based on the file extension. Supports JSON, YAML, and YML
+        formats. Depending on the specified parameters, the method can return either a
+        serialized dictionary (when `to_dict` is True) or a list of serialized tuples.
 
+        If the file path does not exist, it will return an empty dictionary for `to_dict=True` or
+        an empty list otherwise. For unsupported file extensions, a ValueError is raised.
+
+        :param path: The path of the file to be extracted and parsed. If None, uses the default
+                     path provided during initialization (optional).
+        :param to_dict: Indicates whether the output should be serialized as a dictionary. If
+                        False, the output will be serialized as a list of tuples (optional).
+        :type path: str or None
+        :type to_dict: bool
+        :return: Returns the serialized file contents. The type of the return value depends on
+                 the file extension and the `to_dict` flag. For JSON and YAML/YML files, it
+                 returns either a dictionary or a list of tuples. For unsupported extensions
+                 (e.g., 'ts'), it returns None. In case the file is not found, returns an
+                 empty dictionary or list depending on the flag.
+        :rtype: list[tuple[str, str]] | dict | None
+        :raises ValueError: If an unsupported file extension is used.
+        """
         file_path = Path(path) if path else Path(self.path)
         if not file_path.exists():
             return {} if to_dict else []
@@ -110,107 +201,147 @@ class AutoTranslate:
 
     def json_worker(self, lang_work: list or str, lang_file: str, output_dir: str or Path, force: bool,
                     overwrite: bool):
+        """
+        Processes and translates JSON language files for given language(s), and saves the translated
+        content to specified output directory. Language files are handled either from a provided
+        file or a list of them. Also ensures that existing translations are utilized unless
+        `force` or `overwrite` options are enabled.
 
+        :param lang_work: A list or single string representing the target language(s) for translation.
+        :param lang_file: The path of the language file used as a basis for translation.
+        :param output_dir: The directory where the translated JSON files will be stored.
+        :param force: A boolean flag to force translation even if a previous translation exists.
+        :param overwrite: A boolean flag to overwrite previously translated content.
+        :return: None
+        """
         base_data = self.extract_parse_file(to_dict=True)
-        if not isinstance(lang_work, list):
-            lang_work = [lang_work]
+        # if not isinstance(lang_work, list):
+        #     lang_work = [lang_work]
+        lang_work = [lang_work] if isinstance(lang_work, str) else lang_work  # Asegurar que sea una lista
 
-        path_output = Path(output_dir) if output_dir else self.translations_dir
-        path_output.mkdir(parents=True, exist_ok=True)
+        # path_output = Path(output_dir) if output_dir else self.translations_dir
+        # path_output.mkdir(parents=True, exist_ok=True)
 
+        output_path = Path(output_dir) if output_dir else self.translations_dir
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        # for lang in lang_work:
+        #     log.info(f'Traduciendo al idioma: {lang}')
+        #     translated: List[Tuple[str, str]] = []
+        #     output_file = path_output / f"{lang}.json"
+        #
+        #     # Se intenta leer el archivo traducido previamente, si existe
+        #     try:
+        #         new_data = self.extract_parse_file(output_file, to_dict=True)
+        #     except Exception as e:
+        #         log.info(f"No se pudo leer {output_file}, se creará uno nuevo. Error: {e}")
+        #         new_data = {}
+        #
+        #     for key, base_value in base_data.items():
+        #         out_value = new_data.get(key)
+        #         # Si no hay traducción previa o se indica forzar/overwrite, se traduce
+        #         if out_value is None or overwrite or force:
+        #             log.debug(f"Traduciendo la clave: {key} (traducción previa: {out_value})")
+        #             try:
+        #                 translated_text = self.api.translate(base_value, lang_file, lang)
+        #             except Exception as e:
+        #                 log.error(f"Error al traducir {key}: {e}")
+        #                 translated_text = None
+        #             log.info(f'{key} ({lang_file} -> {lang}): {translated_text}')
+        #             translated.append((key, translated_text))
+        #         else:
+        #             log.info(f'Usando traducción existente para {key}: {out_value}')
+        #             translated.append((key, out_value))
+        #
+        #     json_instance = JSON(str(output_file))
+        #     try:
+        #         # Se guarda el resultado en el archivo de salida
+        #         json_instance.save_json_file(json_instance.deserializar_json(translated))
+        #     except Exception as e:
+        #         log.error(f"Error al guardar {output_file}: {e}")
+        #
+        #     log.info('Finish convert languages packages......')
         for lang in lang_work:
             log.info(f'Traduciendo al idioma: {lang}')
-            translated: List[Tuple[str, str]] = []
-            output_file = path_output / f"{lang}.json"
+            output_file = output_path / f"{lang}.json"
+            translated_data = self._process_language_translation(lang, lang_file, base_data, output_file, force,
+                                                                 overwrite)
+            self._save_translated_data(output_file, translated_data)
 
-            # Se intenta leer el archivo traducido previamente, si existe
-            try:
-                new_data = self.extract_parse_file(output_file, to_dict=True)
-            except Exception as e:
-                log.info(f"No se pudo leer {output_file}, se creará uno nuevo. Error: {e}")
-                new_data = {}
+        log.info('Finish converting language packages.')
 
-            for key, base_value in base_data.items():
-                out_value = new_data.get(key)
-                # Si no hay traducción previa o se indica forzar/overwrite, se traduce
-                if out_value is None or overwrite or force:
-                    log.debug(f"Traduciendo la clave: {key} (traducción previa: {out_value})")
-                    try:
-                        translated_text = self.api.translate(base_value, lang_file, lang)
-                    except Exception as e:
-                        log.error(f"Error al traducir {key}: {e}")
-                        translated_text = None
-                    log.info(f'{key} ({lang_file} -> {lang}): {translated_text}')
-                    translated.append((key, translated_text))
-                else:
-                    log.info(f'Usando traducción existente para {key}: {out_value}')
-                    translated.append((key, out_value))
-
-            json_instance = JSON(str(output_file))
-            try:
-                # Se guarda el resultado en el archivo de salida
-                json_instance.save_json_file(json_instance.deserializar_json(translated))
-            except Exception as e:
-                log.error(f"Error al guardar {output_file}: {e}")
-
-            log.info('Finish convert languages packages......')
-
-    def worker(self, base: str = None, langs: list or str = None):
+    def worker(self, base: str = None, langs: list | str = None):
         """
-        Executes work-related tasks based on the provided parameters. This method performs
-        actions specified for the given input languages and modifies the behavior based
-        on the provided arguments, ensuring proper handling of work cases with optional
-        overwriting or forced conditions. Throws an assertion error if no language is
-        specified.
+        Processes language files for translation based on the provided base and language options.
 
-        :param base: Base path or configuration to be used during operations. Defaults to None.
+        The function determines the correct language file to work with and identifies the valid
+        languages for translation. It utilizes the class attributes and provided arguments to
+        select the necessary configurations. If valid settings are not provided or the file format
+        is unsupported, it logs an appropriate error message.
+
+        :param base: Optional base language file to use for translation. If not provided, defaults
+                     are determined based on the instance's attributes.
         :type base: str, optional
-        :param langs: Specifies the languages as a list or string for which the operations
-                      will apply. Must not be None or empty.
+        :param langs: A list or a single string specifying the target languages for translation.
+                      Only languages supported by the instance will be considered.
         :type langs: list or str, optional
-        :param force: If True, forces the operations to proceed, potentially bypassing
-                      standard constraints. Defaults to False.
-        :type force: bool, optional
-        :param overwrite: If True, allows overwriting of existing data or configurations
-                          during the operation. Defaults to False.
-        :type overwrite: bool, optional
-        :return: The result of the worker operation or None if the process terminates early.
-        :rtype: Any
+        :return: None is returned if there are no valid languages for translation or if an
+                 unsupported file format is provided.
+        :rtype: None
         """
 
-        if base:
-            lang_file = base
-        elif self.args and getattr(self.args, 'base', None):
-            lang_file = self.args.base
-        elif self.name in self.language_support:
-            lang_file = self.name
-        else:
-            lang_file = self.lang_work
+        # if base:
+        #     lang_file = base
+        # elif self.args and getattr(self.args, 'base', None):
+        #     lang_file = self.args.base
+        # elif self.name in self.language_support:
+        #     lang_file = self.name
+        # else:
+        #     lang_file = self.lang_work
+        # Determine the base language file
+        lang_file = (
+                base
+                or getattr(self.args, 'base', None)
+                or None
+                # or (self.name if self.name in self.language_support else self.lang_work)
+        )
+        print(self.name)
+        print(self.language_support)
+        print(lang_file)
 
         # Determinar los idiomas de trabajo (lang_work)
-        if langs:
-            if isinstance(langs, list):
-                lang_work = [lang for lang in langs if lang in self.language_support]
-            elif isinstance(langs, str):
-                lang_work = [langs] if langs in self.language_support else []
-            else:
-                lang_work = []
-        elif self.args and getattr(self.args, 'langs', None):
-            if isinstance(self.args.langs, list) and 'all' in self.args.langs:
-                lang_work = [lang for lang in self.language_support if lang != lang_file]
-            elif isinstance(self.args.langs, list):
-                lang_work = [x for x in self.args.langs if x in self.language_support]
-            else:
-                lang_work = []
-        else:
-            lang_work = [self.lang_work] if isinstance(self.lang_work, str) else self.lang_work
+        # if langs:
+        #     if isinstance(langs, list):
+        #         lang_work = [lang for lang in langs if lang in self.language_support]
+        #     elif isinstance(langs, str):
+        #         lang_work = [langs] if langs in self.language_support else []
+        #     else:
+        #         lang_work = []
+        # elif self.args and getattr(self.args, 'langs', None):
+        #     if isinstance(self.args.langs, list) and 'all' in self.args.langs:
+        #         lang_work = [lang for lang in self.language_support if lang != lang_file]
+        #     elif isinstance(self.args.langs, list):
+        #         lang_work = [x for x in self.args.langs if x in self.language_support]
+        #     else:
+        #         lang_work = []
+        # else:
+        #     lang_work = [self.lang_work] if isinstance(self.lang_work, str) else self.lang_work
+        # Determine the target languages (lang_work)
+        lang_work = self._get_target_languages(langs, lang_file)
 
         if not lang_work:
             log.error("No se especificaron idiomas válidos para trabajar.")
             return None
 
+        # if self.ext.lower() == 'json':
+        #     output_dir = self.args.output if self.args and getattr(self.args, 'output', None) else self.translations_dir
+        #     self.json_worker(lang_work, lang_file, output_dir, self.args.force, self.args.overwrite)
+        # else:
+        #     log.error(f"Formato no soportado {self.ext}. Notificar al administrador (waltercunbustamante@gmail.com)")
+        # Handle the supported file formats
         if self.ext.lower() == 'json':
-            output_dir = self.args.output if self.args and getattr(self.args, 'output', None) else self.translations_dir
-            self.json_worker(lang_work, lang_file, output_dir, self.force, self.overwrite)
+            output_dir = getattr(self.args, 'output', None) or self.translations_dir
+            self.json_worker(lang_work, lang_file, output_dir, self.args.force, self.args.overwrite)
         else:
-            log.error(f"Formato no soportado {self.ext}. Notificar al administrador (waltercunbustamante@gmail.com)")
+            log.error(
+                f"Formato no soportado {self.ext}. Notificar al administrador (waltercunbustamante@gmail.com)")

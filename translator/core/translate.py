@@ -5,12 +5,10 @@
 import json
 import logging
 from pathlib import Path
+from typing import Dict
 
-from translate_api import LibreTranslate
 from translator.config import settings
-from translator.parses import JSON
-
-log = logging.getLogger(__name__)
+from translator.api.translate_api import LibreTranslate
 
 
 # config_logging(log, logging.INFO)
@@ -33,11 +31,19 @@ class Translator:
         self.api = LibreTranslate()
 
         self.translations_dir = Path(translations_dir)
+        self.translations_dir.mkdir(parents=True, exist_ok=True)
+
         self._current_lang = default_lang
+        self.dict_trans = {}
 
         # Crear el directorio de traducciones si no existe
-        self.translations_dir.mkdir(parents=True, exist_ok=True)
-        self.__get_languages_supported()
+        self.language_support = list(self.api.get_supported_languages(default_lang, to_list=True))
+
+        if self.language_support:
+            self.language_support.append('auto')
+
+        self.log = logging.getLogger(__name__)
+
         self.dict_trans = self._load_translations(default_lang)
 
     @property
@@ -74,17 +80,32 @@ class Translator:
         self.dict_trans = self._load_translations(value)
         self._current_lang = value
 
-    def __get_languages_supported(self):
-        self.language_support = self.api.get_supported_languages(self.current_lang)
-        if self.language_support:
-            self.language_support.append('auto')
+    # def __get_languages_supported(self):
+    #     """Get supported languages from the API"""
+    #     languages = self.api.get_supported_languages(self.lang)
+    #     if languages:
+    #         languages.append('auto')
+    #     return languages
 
-    def _validate_lang(self, lang):
-        if lang not in self.language_support and lang != 'auto':
+    def _validate_lang(self, lang) -> bool:
+        """
+        Validates whether the provided language is supported or set to 'auto'.
+
+        This method checks if the given language parameter matches one of the
+        supported languages or is explicitly set to 'auto'. It ensures that the
+        input language is correctly validated for compatibility within the
+        application's configuration.
+
+        :param lang: The language code to validate.
+        :type lang: str
+        :return: A boolean indicating whether the language is valid or set to 'auto'.
+        :rtype: bool
+        """
+        if lang not in self.language_support:
             return False
         return True
 
-    def _get_translation_file(self, lang):
+    def _get_translation_file(self, lang) -> Path:
         """
         Obtiene el nombre del archivo JSON para un idioma específico.
 
@@ -93,7 +114,7 @@ class Translator:
         """
         return self.translations_dir / f"{lang}.json"
 
-    def _load_translations(self, lang) -> dict:
+    def _load_translations(self, lang) -> Dict:
         """
         Carga las traducciones de un archivo JSON específico.
 
@@ -111,21 +132,30 @@ class Translator:
         else:
             return {}
 
-    def _load_struct_translate(self, base_file: str = None) -> None:
-        print(self.meta)
-        if self.meta.get('ext') == 'json':
-            json_data = JSON.get_content_json_file(base_file or self.meta.get('path'))
-            extracted_texts = JSON.serializer_json(json_data)
-            for path, text in extracted_texts:
-                print(f"Ruta: {path} -> {text}")
-        elif self.meta.get('ext') == 'yaml':
-            pass
-        elif self.meta.get('ts') == 'ts' or self.meta.get('name') == 'i18n.ts':
-            pass
-        else:
-            raise ValueError(f"Formato no soportado {self.meta.get('ext')}")
+    # def _load_struct_translate(self, base_file: str = None) -> None:
+    #     """
+    #     Loads translation structure based on the file type and extracts the relevant content. Supports specific
+    #     extensions like `json`, and processes content accordingly. Other extensions or unsupported formats
+    #     will raise a ValueError.
+    #
+    #     :param base_file: Path to the base file for processing. Defaults to None, meaning that path will
+    #                       be retrieved from the meta data if not explicitly provided.
+    #     :type base_file: Optional[str]
+    #     :return: None
+    #     """
+    #     if self.meta.get('ext') == 'json':
+    #         json_data = JSON.get_content_json_file(base_file or self.meta.get('path'))
+    #         extracted_texts = JSON.serializer_json(json_data)
+    #         for path, text in extracted_texts:
+    #             print(f"Ruta: {path} -> {text}")
+    #     elif self.meta.get('ext') == 'yaml':
+    #         pass
+    #     elif self.meta.get('ts') == 'ts' or self.meta.get('name') == 'i18n.ts':
+    #         pass
+    #     else:
+    #         raise ValueError(f"Formato no soportado {self.meta.get('ext')}")
 
-    def _save_translations(self, lang, translations):
+    def _save_translations(self, lang, translations) -> None:
         """
         Guarda las traducciones en un archivo JSON específico.
 
@@ -137,7 +167,7 @@ class Translator:
         with file_path.open("w", encoding="utf-8") as file:
             json.dump(translations, file, ensure_ascii=False, indent=4)
 
-    def add_trans(self, key, lang, value):
+    def add_trans(self, key: str, lang: str, value: str, force: bool = False) -> None:
         """
         Agrega una traducción para una clave en un idioma específico.
 
@@ -146,26 +176,14 @@ class Translator:
         :param value: El texto traducido.
         """
 
-        log.info(f'Obtener archivo lang({lang})')
+        self.log.info(f'Obtener archivo lang({lang})')
         translations = self._load_translations(lang)
-        log.info(f'Obteniendo traduccion({key})')
+        self.log.info(f'Obteniendo traduccion({key})')
         translations[key] = value
-        log.info(f'Guardando traduccion >> {key}: {translations}')
+        self.log.info(f'Guardando traduccion >> {key}: {translations}')
         self._save_translations(lang, translations)
 
-    # def set_language(self, lang):
-    #     """
-    #     Establece el idioma actual para las traducciones.
-    #
-    #     :param lang: El idioma que se usará (e.g., 'en', 'es').
-    #     """
-    #     if not self._validate_lang(lang):
-    #         raise ValueError(
-    #             f"Invalid language code: {lang}. Supported languages: {', '.join(self.language_support)}")
-    #     self.dict_trans = self._load_translations(lang)
-    #     self.current_lang = lang
-
-    def translate(self, key):
+    def _translate(self, key) -> str:
         """
         Traduce una clave al idioma actual. Si no encuentra una traducción,
         intenta usar el idioma predeterminado. Si tampoco existe, devuelve un mensaje por defecto.
@@ -174,36 +192,38 @@ class Translator:
         :return: La traducción correspondiente o un mensaje predeterminado.
         """
         # Intentar traducir en el idioma actual
-        translation = self.dict_trans.get(key)
+        translation = self.dict_trans.get(key, None)
         if translation:
             return translation
 
         # Si no se encuentra, intentar traducir en el idioma predeterminado
-        if self.current_lang != self.default_lang:
-            translation = self._load_translations(self.default_lang)
-            translation = translation.get(key)
-            if translation:
-                return translation
+
+        translation = self._load_translations(self.lang)
+        translation = translation.get(key)
+        if translation:
+            return translation
 
         # Si no hay traducción, devolver un mensaje predeterminado
+        self.add_trans(key, self.lang, "No implement Translation")
         return "No implement Translation"
 
-    def __getattr__(self, key):
+    def __getattr__(self, key) -> str:
         """
         Permite acceder a las claves de traducción como si fueran atributos de la clase.
 
         :param key: La clave a traducir.
         :return: La traducción correspondiente o un mensaje predeterminado.
         """
-        log.info(f'Obteniendo atributo >> {key}')
-        return self.translate(key)
+        self.log.info(f'Obteniendo atributo >> {key}')
+        return self._translate(key)
 
 
 if __name__ == '__main__':
     translate = Translator()
     print(translate.lang)
     print(translate.greetings)
-    translate.set_language("es")
+    translate.lang = "es"
+    print(translate.lang)
     print(translate.greetings)
 
-    translate.auto_translate("es", ["en"])
+    # translate.auto_translate("es", ["en"])
