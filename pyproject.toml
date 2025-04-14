@@ -53,6 +53,8 @@ classifiers = [
     "Natural Language :: Spanish",
 ]
 dependencies = [
+    "requests>=2.32.3",
+    "requests-cache>=1.2.1",
     "pydantic-settings>=2.8.0",
     "setuptools>=75.8.2"
 ]
@@ -69,19 +71,10 @@ dev = [
     "black",
     "flake8",
     "build>=1.2.2.post1",
-]
-autotranslate = [
-    "requests>=2.32.3",
-    "requests-cache>=1.2.1",
+    "twine",
 ]
 
 yml = [
-    "pyyaml>=6.0.2",
-]
-
-all = [
-    "requests>=2.32.3",
-    "requests-cache>=1.2.1",
     "pyyaml>=6.0.2",
 ]
 
