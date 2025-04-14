@@ -41,6 +41,7 @@ setup(
             "black",
             "flake8",
             "build>=1.2.2.post1",
+            "twine",
         ],
         "autotranslate": [
             "requests>=2.32.3",
