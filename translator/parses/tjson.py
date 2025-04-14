@@ -1,6 +1,7 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """ translator/parses/json.py """
+import json
 import logging
 from pathlib import Path
 from typing import Union, Dict, List, Tuple

@@ -3,6 +3,6 @@
 
 """ translator/parses/__init__.py """
 
-from .json import JSON
-
-__all__ = ['JSON']
+# from .json import JSON
+#
+# __all__ = ['JSON']
