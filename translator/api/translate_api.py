@@ -52,10 +52,12 @@ class LibreTranslate:
         self.url_languages = urljoin(url, 'languages')
         self.max_retries = max_retries
         self.retry_delay = retry_delay
+        self.session = self._configure_session()
 
+    def _configure_session(self):
         # Configuramos una sesión para reutilizar conexiones y mejorar el rendimiento
-        self.session = requests.Session()
-        self.session.headers.update(settings.HEADERS)
+        session = requests.Session()
+        session.headers.update(settings.HEADERS)
 
         # Configuramos el retry utilizando HTTPAdapter y urllib3.util.Retry
         retry_strategy = Retry(
@@ -65,8 +67,9 @@ class LibreTranslate:
             allowed_methods=["HEAD", "GET", "OPTIONS", "POST"]
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
-        self.session.mount("https://", adapter)
-        self.session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        return session
 
     def _request_supported_languages(self):
         """
@@ -122,7 +125,7 @@ class LibreTranslate:
         except Exception as e:
             log.error(f"Error al obtener idiomas: {str(e)}")
             ensure_docker()
-            return self.get_supported_languages( lang_base, to_list)
+            return self.get_supported_languages(lang_base, to_list)
 
     def translate(self, text, source, target, retry=0):
         """
@@ -150,34 +153,27 @@ class LibreTranslate:
             "target": target,
             "format": "text",
         }
-
-        # while retry <= self.max_retries:
-        #     try:
-        #         with requests_cache.disabled():
-        #             response = requests.post(self.url_translate, json=payload, headers=settings.HEADERS,
-        #                                      timeout=self.retry_delay or 3)
-        #             if response.status_code == 200:
-        #                 translated_text = response.json().get("translatedText", "")
-        #                 if not translated_text:
-        #                     log.error("La respuesta del servidor no contiene la traducción.")
-        #                 return translated_text
-        #             else:
-        #                 log.error(f"Error: {response.status_code}, {response.content}")
-        #     except requests.RequestException as e:
-        #         log.error(f"Excepción en la traducción: {str(e)}")
-        #     retry += 1
         try:
             # with requests_cache.disabled():
-            response = requests.post(self.url_translate, json=payload)
-            if response.status_code == 200:
-                translated_text = response.json().get("translatedText", "")
-                if not translated_text:
-                    log.error("La respuesta del servidor no contiene la traducción.")
-                return translated_text
-            else:
-                log.error(f"Error: {response.status_code}, {response.content}")
+            response = requests.post(self.url_translate, json=payload,timeout=self.retry_delay)
+            response.raise_for_status()
+            translated_text = response.json().get("translatedText", "")
+            if not translated_text:
+                log.warning("Empty translation received from server")
+            return translated_text
+            # if response.status_code == 200:
+            #     translated_text = response.json().get("translatedText", "")
+            #     if not translated_text:
+            #         log.error("La respuesta del servidor no contiene la traducción.")
+            #     return translated_text
+            # else:
+            #     log.error(f"Error: {response.status_code}, {response.content}")
         except requests.RequestException as e:
-            log.error(f"Error en la traducción: {e}")
+            log.error(f"Translation error: {e}")
+            ensure_docker()
+            if retry < self.max_retries:
+                log.info(f"Retrying translation (attempt {retry + 1}/{self.max_retries})")
+                return self.translate(text, source, target, retry + 1)
             return ""
 
 # if __name__ == '__main__':
