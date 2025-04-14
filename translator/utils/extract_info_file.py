@@ -6,6 +6,9 @@
 import re
 from pathlib import Path
 
+from translator import settings
+from translator.utils.searches import buscar_path, search_path
+
 LANG_PATTERN = re.compile(r"\b([a-z]{2}(-[a-z]{2})?)\b", re.IGNORECASE)
 
 
@@ -53,8 +56,9 @@ class TranslateFile:
 
         self.path = path
 
-        self._directory = path.parent.resolve()
+        self._directory = search_path(settings.BASE_DIR, path)
         self._file, self._ext = path.name.split(".", 1)
+        self._extract_content()
 
     # --------------------------------------------------------------------------------------------------------------
 
@@ -84,18 +88,17 @@ class TranslateFile:
 
     @property
     def content(self) -> str:
-        return self._content
+        return self._content or ""
 
     # --------------------------------------------------------------------------------------------------------------
 
     def _extract_content(self):
         try:
-            with open(self.path, "r", encoding="utf-8") as f:
+            with open(self.directory, "r", encoding="utf-8") as f:
                 self._content = f.read()
-                return self._content
         except Exception as e:
             print(f"Error al leer el archivo: {e}")
-            return ""
+            self._content = ""
 
     # --------------------------------------------------------------------------------------------------------------
 
@@ -121,13 +124,6 @@ class TranslateFile:
 
         coincidences = re.findall(patron, content, re.VERBOSE | re.MULTILINE)
         return True if len(coincidences) > 0 else None, coincidences
-
-    def from_json(self):
-        pass
-
-    def to_dict(self):
-        pass
-
 
     # --------------------------------------------------------------------------------------------------------------
 
