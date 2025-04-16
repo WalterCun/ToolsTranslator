@@ -3,4 +3,4 @@
 
 """ translator/models/__init__.py """
 
-from .info_file import InfoFile
+# from .info_file import InfoFile
