@@ -6,58 +6,46 @@
 import re
 from pathlib import Path
 
-from translator import settings
-from translator.utils.searches import buscar_path, search_path
+import logging
+from typing import Union
 
-LANG_PATTERN = re.compile(r"\b([a-z]{2}(-[a-z]{2})?)\b", re.IGNORECASE)
+log = logging.getLogger(__name__)
 
 
-# def extract_lang_info_from_filename(path: Path) -> dict[str, str or Path]:
-#     """
-#     Extracts language and other metadata from a file's path.
-#
-#     This function processes the given file path to decompose it into
-#     useful components: the full path as a string, the parent directory,
-#     the file extension, the full filename, and an optionally extracted
-#     language code if present in the filename.
-#
-#     :param path: The file path to be analyzed.
-#     :type path: Path
-#     :return: A dictionary containing the file path, directory, file
-#         extension, full filename, and an optional detected language code.
-#     :rtype: dict[str, str]
-#     """
-#     directory = path.parent
-#     file, ext = path.name.split(".", 1)
-#     match = LANG_PATTERN.search(file)
-#
-#     return {
-#         "path": path,
-#         "directory": directory,
-#         "lang": str(match.group(1)) if match else None,
-#         "ext": ext,
-#         "name": path.name
-#     }
+from translator.utils.searches import search_path
+
+# LANG_PATTERN = re.compile(r"\b([a-z]{2}(-[a-z]{2})?)\b", re.IGNORECASE)
+PATTERN_I18N = re.compile(
+    r"const\s+messages\s*=\s*"  # busca 'const messages ='
+    r"(\{[\s\S]*?\})"  # captura desde la primera '{' hasta el '}' más próximo
+    r"\s*export\s+default",  # lookahead para asegurar que es el bloque que sigue al export
+    re.MULTILINE
+)
+
+PATTERN_JSON = r'^[a-z]{2}$'
 
 
 class TranslateFile:
     _path: Path
     _directory: Path
-    _content: str
+    _content: dict
+    _backup: dict
     _file: str
     _name: str
     _ext: str
 
     # --------------------------------------------------------------------------------------------------------------
 
-    def __init__(self, path: Path or str):
+    def __init__(self, path: Union[Path, str]):
+        from translator import settings
         if not isinstance(path, Path):
             path = Path(path)
 
-        self.path = path
+        self.path = search_path(settings.BASE_DIR, path)
 
-        self._directory = search_path(settings.BASE_DIR, path)
+        self._directory = self.path.parent
         self._file, self._ext = path.name.split(".", 1)
+        self._name = path.stem
         self._extract_content()
 
     # --------------------------------------------------------------------------------------------------------------
@@ -87,25 +75,48 @@ class TranslateFile:
         return self._ext
 
     @property
-    def content(self) -> str:
-        return self._content or ""
+    def content(self) -> dict:
+        return self._content
 
     # --------------------------------------------------------------------------------------------------------------
 
-    def _extract_content(self):
+    def _extract_content(self) -> None:
+        self._content = {}  # Valor predeterminado en caso de error
+
         try:
-            with open(self.directory, "r", encoding="utf-8") as f:
-                self._content = f.read()
+            with open(self.path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Intentar parsear como JSON primero
+            is_json, json_data = self._is_json(content)
+            if is_json:
+                self._content = json_data
+                return
+
+            # Intentar parsear como archivo i18n si no es JSON
+            is_i18n, i18n_data = self._is_i18n(content)
+            if is_i18n:
+                self._content = i18n_data
+                return
+
+            # Si llegamos aquí, no se pudo parsear el contenido
+            return
+
+        except FileNotFoundError:
+            log.error(f"Error: El archivo {self.path} no existe")
+            return
+        except PermissionError:
+            log.error(f"Error: No hay permisos para leer el archivo {self.path}")
+            return
         except Exception as e:
-            print(f"Error al leer el archivo: {e}")
-            self._content = ""
+            log.error(f"Error al leer el archivo {self.path}: {e}")
+            return
 
     # --------------------------------------------------------------------------------------------------------------
 
     @staticmethod
     def _is_json(content):
         import json
-
         try:
             return True, json.loads(content)
         except json.JSONDecodeError:
@@ -113,43 +124,34 @@ class TranslateFile:
 
     @staticmethod
     def _is_i18n(content):
-        # Patrón para detectar claves de idioma (ej: "es", 'en') con objetos anidados
-        patron = r'''
-            (["']{1}([a-z]{2})["']{1})   # Grupo 1: Clave de idioma entre comillas
-            \s*:\s*                       # Separador clave-valor
-            \{                            # Inicio de objeto
-            (?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*  # Contenido del objeto (permite anidados)
-            \}                            # Fin de objeto
-        '''
-
-        coincidences = re.findall(patron, content, re.VERBOSE | re.MULTILINE)
-        return True if len(coincidences) > 0 else None, coincidences
+        import json
+        try:
+            coincidences = PATTERN_I18N.search(content)
+            data = coincidences.group(1)
+            return True if data else None, json.loads(data)
+        except json.JSONDecodeError:
+            log.error("Error al parsear el contenido del archivo i18n")
+        except AttributeError:
+            log.error("")
+        return False, None
 
     # --------------------------------------------------------------------------------------------------------------
 
-    def analise_file(self):
-        content = self._extract_content()
-
-        validate, data = self._is_json(content)
-        if validate:
-            # Verifica si todas las claves son códigos de idioma de 2 letras
-            if all(re.match(r'^[a-z]{2}$', clave) for clave in data.keys()):
-                return "Archivo de idiomas (JSON)"
-            else:
-                return "JSON genérico"
-        validate, data = self._is_i18n(content)
-        # Verifica si es archivo de idiomas no-JSON (ej: objeto JS/TS)
-        if validate:
-            return "Archivo de idiomas (JS/TS)"
-
-        return "Tipo desconocido"
+    # def save(self):
+    #     # TODO: Revisar el tema de guardar la informacion modificada
+    #     try:
+    #         with open(self.path, "w", encoding="utf-8") as f:
+    #             f.write(self.content)
+    #     except Exception as e:
+    #         log.error(f"Error al guardar el archivo: {e}")
 
 
 if __name__ == '__main__':
     # path = Path("struct_files/en.json")
     tf = TranslateFile("struct_files/i18n.ts")
 
-    print(tf.directory)
-    print(tf.file)
-    print(tf.ext)
+    # print(tf.path)
+    # print(tf.directory)
+    # print(tf.file)
+    # print(tf.ext)
     print(tf.content)

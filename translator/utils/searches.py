@@ -2,41 +2,8 @@
 # -*- coding: utf-8 -*-
 """ translator/utils/searches.py """
 
-import os
 from pathlib import Path
 from typing import Union, List
-
-
-# def buscar_path(base_dir: Path, search: Path, all=False):
-#     # Verificar que el directorio existe
-#     if not base_dir.exists() or not base_dir.is_dir():
-#         raise ValueError(f"El directorio base '{base_dir}' no existe o no es un directorio")
-#
-#     # Lista para almacenar las coincidencias
-#     coincidencias = []
-#
-#     # Recorrer recursivamente todos los directorios y archivos
-#     for ruta_actual, directorios, archivos in os.walk(base_dir):
-#         ruta_actual = Path(ruta_actual)
-#
-#         # Verificar si el patrón coincide con alguna parte de la ruta actual
-#         if str(search) in str(ruta_actual):
-#             coincidencias.append(ruta_actual)
-#             if not all:
-#                 return ruta_actual
-#
-#         # También verificar los archivos
-#         for archivo in archivos:
-#             ruta_archivo = ruta_actual / archivo
-#             if str(search) in str(ruta_archivo):
-#                 coincidencias.append(ruta_archivo)
-#                 if not all:
-#                     return ruta_archivo
-#
-#     # Devolver todas las coincidencias o None si no se encontró ninguna
-#     if all:
-#         return coincidencias
-#     return None
 
 
 def search_path(base_dir: Path, search_pattern: Path, all_matches: bool = False) -> Union[Path, List[Path], None]:
