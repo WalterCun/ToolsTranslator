@@ -8,13 +8,14 @@ from pathlib import Path
 from typing import List, Tuple
 
 from translator.parses.tyaml import YAML
-from translator.tools.config_logging import config_logging
+# from translator.tools.config_logging import config_logging
 from translator.parses.tjson import JSON
 
-from translator.models.info_file import InfoFile
+# from translator.models.info_file import InfoFile
+from translator.utils import TranslateFile
 
 log = logging.getLogger(__name__)
-config_logging(log, logging.WARNING)
+# config_logging(log, logging.WARNING)
 
 
 class AutoTranslate:
@@ -43,7 +44,7 @@ class AutoTranslate:
     :type args: Namespace
     """
 
-    def __init__(self, meta: InfoFile, args: Namespace = Namespace(base=None)):
+    def __init__(self, meta: TranslateFile, args: Namespace = Namespace(base=None)):
         """
         Initializes a new instance of the class, setting up translation API, resolving language and path
         information, and initializing required directories.
@@ -56,14 +57,14 @@ class AutoTranslate:
         """
         from translator.api.translate_api import LibreTranslate
         self.api = LibreTranslate()
-        self.language_support = self.api.get_supported_languages(args.base or meta.lang or 'all', True)
+        self.language_support = self.api.get_supported_languages(args.base or 'all', True)
 
-        self.path = meta.path
+        self.path = str(meta.path)
 
         self.translations_dir = Path(meta.directory)
         self.translations_dir.mkdir(parents=True, exist_ok=True)
 
-        self.lang_work = meta.lang or 'all'
+        self.lang_work = 'all'
         self.name = meta.name
         self.ext = meta.ext
 
@@ -157,7 +158,8 @@ class AutoTranslate:
         except Exception as e:
             log.error(f"Error al guardar {output_file}: {e}")
 
-    def extract_parse_file(self, path=None, to_dict: bool = False) -> list[tuple[str, str]] or dict or None:
+    def extract_parse_file(self, path: str or Path or None = None, to_dict: bool = False) -> list[tuple[
+        str, str]] or dict or None:
         """
         Extracts and parses a file based on the file extension. Supports JSON, YAML, and YML
         formats. Depending on the specified parameters, the method can return either a
@@ -180,7 +182,7 @@ class AutoTranslate:
         :rtype: list[tuple[str, str]] | dict | None
         :raises ValueError: If an unsupported file extension is used.
         """
-        file_path = Path(path) if path else Path(self.path)
+        file_path = path if isinstance(path, Path) else path if path else Path(self.path)
         if not file_path.exists():
             return {} if to_dict else []
 
@@ -303,42 +305,20 @@ class AutoTranslate:
                 base
                 or getattr(self.args, 'base', None)
                 or None
-                # or (self.name if self.name in self.language_support else self.lang_work)
+            # or (self.name if self.name in self.language_support else self.lang_work)
         )
-        print(self.name)
-        print(self.language_support)
-        print(lang_file)
+        if langs is None:
+            log.info("Detectando idioma")
+            with open(self.path, 'r') as f:
+                lang_file = self.api.detect_language(f.read())
+                log.warning("Idioma detectado: " + lang_file)
 
-        # Determinar los idiomas de trabajo (lang_work)
-        # if langs:
-        #     if isinstance(langs, list):
-        #         lang_work = [lang for lang in langs if lang in self.language_support]
-        #     elif isinstance(langs, str):
-        #         lang_work = [langs] if langs in self.language_support else []
-        #     else:
-        #         lang_work = []
-        # elif self.args and getattr(self.args, 'langs', None):
-        #     if isinstance(self.args.langs, list) and 'all' in self.args.langs:
-        #         lang_work = [lang for lang in self.language_support if lang != lang_file]
-        #     elif isinstance(self.args.langs, list):
-        #         lang_work = [x for x in self.args.langs if x in self.language_support]
-        #     else:
-        #         lang_work = []
-        # else:
-        #     lang_work = [self.lang_work] if isinstance(self.lang_work, str) else self.lang_work
-        # Determine the target languages (lang_work)
         lang_work = self._get_target_languages(langs, lang_file)
 
         if not lang_work:
             log.error("No se especificaron idiomas válidos para trabajar.")
             return None
 
-        # if self.ext.lower() == 'json':
-        #     output_dir = self.args.output if self.args and getattr(self.args, 'output', None) else self.translations_dir
-        #     self.json_worker(lang_work, lang_file, output_dir, self.args.force, self.args.overwrite)
-        # else:
-        #     log.error(f"Formato no soportado {self.ext}. Notificar al administrador (waltercunbustamante@gmail.com)")
-        # Handle the supported file formats
         if self.ext.lower() == 'json':
             output_dir = getattr(self.args, 'output', None) or self.translations_dir
             self.json_worker(lang_work, lang_file, output_dir, self.args.force, self.args.overwrite)
