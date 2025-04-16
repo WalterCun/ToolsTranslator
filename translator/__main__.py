@@ -37,7 +37,8 @@ if __name__ == "__main__":
 
     sys.argv = [
         "translator",
-        "auto-translate", "D:\Coders\ToolsTranslator\langs\es.json",
+        "auto-translate", "D:\Coders\ToolsTranslator\struct_files\en.json",
+        "--output", "D:\Coders\ToolsTranslator\struct_files\output",
         "--lang", "en", "fr",
     ]
     main()

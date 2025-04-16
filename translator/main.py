@@ -9,8 +9,8 @@ import sys
 
 from pathlib import Path
 
-from translator.models import InfoFile
-from translator.utils import extract_lang_info_from_filename
+# from translator.models import InfoFile
+from translator.utils import TranslateFile
 
 from translator import AutoTranslate, Translator
 
@@ -70,7 +70,7 @@ def handle_auto_translate(args):
         return
 
     # Detectar el idioma base desde el nombre del archivo o usar --base
-    info_file = InfoFile.from_dict(extract_lang_info_from_filename(file_path))
+    info_file = TranslateFile(file_path)
 
     translator = AutoTranslate(info_file, args=args)
     translator.worker()
