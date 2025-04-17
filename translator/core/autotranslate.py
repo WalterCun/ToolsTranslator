@@ -5,7 +5,7 @@
 import logging
 from argparse import Namespace
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from translator.parses.tyaml import YAML
 # from translator.tools.config_logging import config_logging
@@ -15,6 +15,8 @@ from translator.parses.tjson import JSON
 from translator.utils import TranslateFile
 
 log = logging.getLogger(__name__)
+
+
 # config_logging(log, logging.WARNING)
 
 
@@ -126,7 +128,7 @@ class AutoTranslate:
 
         return translated_data
 
-    def _translate_key(self, base_value: str, lang_file: str, lang: str, key: str) -> str:
+    def _translate_key(self, base_value: str, lang_file: str, lang: str, key: str) -> Optional[str]:
         """
         Translates a single key value.
 
@@ -146,10 +148,15 @@ class AutoTranslate:
 
     def _save_translated_data(self, output_file: Path, translated_data: dict):
         """
-        Saves translated data to a JSON file.
+        Saves the translated data to the specified output file in JSON format.
 
-        :param output_file: The path to the file where the data will be saved.
-        :param translated_data: The dictionary containing the translated data.
+        This method takes a file path and a dictionary containing translated data,
+        serializes the data to JSON format, and saves it to the given output file.
+        If an error occurs during the save process, an error message is logged.
+
+        :param output_file: The file path where the translated data will be saved.
+        :param translated_data: A dictionary containing key-value pairs of the
+            translated data that needs to be saved.
         :return: None
         """
         json_instance = JSON(str(output_file))
@@ -272,7 +279,7 @@ class AutoTranslate:
 
         log.info('Finish converting language packages.')
 
-    def worker(self, base: str = None, langs: list | str = None):
+    def worker(self, base: str = None, langs: list | str = None) -> None:
         """
         Processes language files for translation based on the provided base and language options.
 
@@ -291,22 +298,12 @@ class AutoTranslate:
                  unsupported file format is provided.
         :rtype: None
         """
-
-        # if base:
-        #     lang_file = base
-        # elif self.args and getattr(self.args, 'base', None):
-        #     lang_file = self.args.base
-        # elif self.name in self.language_support:
-        #     lang_file = self.name
-        # else:
-        #     lang_file = self.lang_work
-        # Determine the base language file
         lang_file = (
                 base
                 or getattr(self.args, 'base', None)
                 or None
-            # or (self.name if self.name in self.language_support else self.lang_work)
         )
+
         if langs is None:
             log.info("Detectando idioma")
             with open(self.path, 'r') as f:
@@ -317,7 +314,6 @@ class AutoTranslate:
 
         if not lang_work:
             log.error("No se especificaron idiomas válidos para trabajar.")
-            return None
 
         if self.ext.lower() == 'json':
             output_dir = getattr(self.args, 'output', None) or self.translations_dir
@@ -325,3 +321,4 @@ class AutoTranslate:
         else:
             log.error(
                 f"Formato no soportado {self.ext}. Notificar al administrador (waltercunbustamante@gmail.com)")
+        # return None
