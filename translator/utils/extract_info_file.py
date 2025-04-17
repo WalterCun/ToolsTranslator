@@ -4,48 +4,49 @@
 """ translator/utils/extract_info_file.py """
 
 import re
+from functools import wraps
 from pathlib import Path
 
 import logging
-from typing import Union
+import json
+from typing import Union, Tuple, Optional, Dict
 
 log = logging.getLogger(__name__)
-
 
 from translator.utils.searches import search_path
 
 # LANG_PATTERN = re.compile(r"\b([a-z]{2}(-[a-z]{2})?)\b", re.IGNORECASE)
-PATTERN_I18N = re.compile(
-    r"const\s+messages\s*=\s*"  # busca 'const messages ='
-    r"(\{[\s\S]*?\})"  # captura desde la primera '{' hasta el '}' más próximo
-    r"\s*export\s+default",  # lookahead para asegurar que es el bloque que sigue al export
-    re.MULTILINE
-)
+
 
 PATTERN_JSON = r'^[a-z]{2}$'
 
 
 class TranslateFile:
-    _path: Path
-    _directory: Path
-    _content: dict
-    _backup: dict
-    _file: str
-    _name: str
-    _ext: str
+    """Clase para manejar archivos de traducción en diferentes formatos."""
+
+    PATTERN_I18N = re.compile(
+        r"const\s+messages\s*=\s*"  # busca 'const messages ='
+        r"(\{[\s\S]*?\})"  # captura desde la primera '{' hasta el '}' más próximo
+        r"\s*export\s+default",  # lookahead para asegurar que es el bloque que sigue al export
+        re.MULTILINE
+    )
 
     # --------------------------------------------------------------------------------------------------------------
 
     def __init__(self, path: Union[Path, str]):
         from translator import settings
+
         if not isinstance(path, Path):
             path = Path(path)
 
-        self.path = search_path(settings.BASE_DIR, path)
-
-        self._directory = self.path.parent
+        self.path: Path = search_path(settings.BASE_DIR, path)
+        self._directory: Path = self.path.parent
         self._file, self._ext = path.name.split(".", 1)
-        self._name = path.stem
+        self._name: str = path.stem
+
+        self._content: dict = {}
+        self._backup: dict = {}
+
         self._extract_content()
 
     # --------------------------------------------------------------------------------------------------------------
@@ -79,44 +80,87 @@ class TranslateFile:
         return self._content
 
     # --------------------------------------------------------------------------------------------------------------
+    @staticmethod
+    def _handle_file_exceptions(func):
+        """
+        Decorador para manejar excepciones comunes en operaciones de archivos.
+        """
 
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            try:
+                return func(self, *args, **kwargs)
+            except FileNotFoundError:
+                log.error(f"Error: El archivo {self.path} no existe")
+            except PermissionError:
+                log.error(f"Error: No hay permisos para leer el archivo {self.path}")
+            except Exception as e:
+                log.error(f"Error al procesar el archivo {self.path}: {e}")
+            return None
+
+        return wrapper
+
+    @_handle_file_exceptions
     def _extract_content(self) -> None:
-        self._content = {}  # Valor predeterminado en caso de error
+        # self._content = {}  # Valor predeterminado en caso de error
+        #
+        # try:
+        #     with open(self.path, "r", encoding="utf-8") as f:
+        #         content = f.read()
+        #
+        #     # Intentar parsear como JSON primero
+        #     is_json, json_data = self._is_json(content)
+        #     if is_json:
+        #         self._content = json_data
+        #         return
+        #
+        #     # Intentar parsear como archivo i18n si no es JSON
+        #     is_i18n, i18n_data = self._is_i18n(content)
+        #     if is_i18n:
+        #         self._content = i18n_data
+        #         return
+        #
+        #     # Si llegamos aquí, no se pudo parsear el contenido
+        #     return
+        #
+        # except FileNotFoundError:
+        #     log.error(f"Error: El archivo {self.path} no existe")
+        #     return
+        # except PermissionError:
+        #     log.error(f"Error: No hay permisos para leer el archivo {self.path}")
+        #     return
+        # except Exception as e:
+        #     log.error(f"Error al leer el archivo {self.path}: {e}")
+        #     return
+        """Extrae el contenido del archivo y lo convierte al formato adecuado."""
+        with open(self.path, "r", encoding="utf-8") as f:
+            content = f.read()
 
-        try:
-            with open(self.path, "r", encoding="utf-8") as f:
-                content = f.read()
-
-            # Intentar parsear como JSON primero
-            is_json, json_data = self._is_json(content)
-            if is_json:
-                self._content = json_data
-                return
-
-            # Intentar parsear como archivo i18n si no es JSON
-            is_i18n, i18n_data = self._is_i18n(content)
-            if is_i18n:
-                self._content = i18n_data
-                return
-
-            # Si llegamos aquí, no se pudo parsear el contenido
+        # Intentar parsear como JSON primero
+        is_json, json_data = self._is_json(content)
+        if is_json:
+            self._content = json_data
             return
 
-        except FileNotFoundError:
-            log.error(f"Error: El archivo {self.path} no existe")
-            return
-        except PermissionError:
-            log.error(f"Error: No hay permisos para leer el archivo {self.path}")
-            return
-        except Exception as e:
-            log.error(f"Error al leer el archivo {self.path}: {e}")
-            return
+        # Intentar parsear como archivo i18n si no es JSON
+        is_i18n, i18n_data = self._is_i18n(content)
+        if is_i18n:
+            self._content = i18n_data
 
     # --------------------------------------------------------------------------------------------------------------
 
     @staticmethod
-    def _is_json(content):
-        import json
+    def _is_json(content) -> Tuple[bool, Optional[Dict]]:
+        """
+                Comprueba si el contenido es un JSON válido.
+
+                Args:
+                    content: Contenido del archivo
+
+                Returns:
+                    Tupla con (es_json, datos_json)
+        """
+
         try:
             return True, json.loads(content)
         except json.JSONDecodeError:
@@ -124,15 +168,36 @@ class TranslateFile:
 
     @staticmethod
     def _is_i18n(content):
-        import json
+        # try:
+        #     coincidences = PATTERN_I18N.search(content)
+        #     data = coincidences.group(1)
+        #     return True if data else None, json.loads(data)
+        # except json.JSONDecodeError:
+        #     log.error("Error al parsear el contenido del archivo i18n")
+        # except AttributeError:
+        #     log.error("")
+        # return False, None
+        """
+                Comprueba si el contenido es un archivo i18n válido.
+
+                Args:
+                    content: Contenido del archivo
+
+                Returns:
+                    Tupla con (es_i18n, datos_i18n)
+                """
         try:
-            coincidences = PATTERN_I18N.search(content)
+            coincidences = TranslateFile.PATTERN_I18N.search(content)
+            if not coincidences:
+                return False, None
+
             data = coincidences.group(1)
-            return True if data else None, json.loads(data)
+            return True, json.loads(data)
         except json.JSONDecodeError:
             log.error("Error al parsear el contenido del archivo i18n")
         except AttributeError:
-            log.error("")
+            log.error("No se encontró el patrón i18n en el archivo")
+
         return False, None
 
     # --------------------------------------------------------------------------------------------------------------
