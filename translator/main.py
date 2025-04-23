@@ -15,8 +15,15 @@ from translator.utils import TranslateFile
 from translator import AutoTranslate, Translator
 
 
+logging.basicConfig(
+    level=logging.WARN,  # Establece el nivel mínimo de log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    format="[%(asctime)s] - [%(name)s] - [%(levelname)s] -> %(message)s",  # Formato del log
+    handlers=[
+        logging.StreamHandler(),  # Enviar mensajes al terminal
+    ]
+)
+
 log = logging.getLogger(__name__)
-log.setLevel(logging.WARNING)
 
 def main():
     if len(sys.argv) > 1:
