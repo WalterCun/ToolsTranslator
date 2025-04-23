@@ -5,7 +5,7 @@
 
 import logging
 from datetime import timedelta
-from typing import Optional, Dict
+from typing import Optional, Dict, Union, Any
 from urllib.parse import urljoin
 
 import requests
@@ -128,15 +128,14 @@ class LibreTranslate:
             ensure_docker()
             return self.get_supported_languages(lang_base, to_list)
 
-    def detect_language(self, text):
+    def detect_language(self, text) -> str | tuple[Any, Any]:
         try:
             response = requests.post(self.url_detect, json={'q':text}, headers=settings.HEADERS)
             response.raise_for_status()
-            print(response.json())
-            return response.json()[0]['language']
+            return response.json()[0]['language'], response.json()[0]['confidence']
         except requests.RequestException as e:
             log.error(f"Detection error: {e}")
-            return "No detect a language"
+            return "No detect a language", None
 
     def translate(self, text, source, target, retry=0):
         """
