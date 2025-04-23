@@ -49,7 +49,8 @@ class JSON:
         return text_entries
 
     @staticmethod
-    def deserializar_json(entries: List[Tuple[str, str]]) -> Union[Dict, List]:
+    def deserializar_json(entries: List[tuple[str, str]] or Dict[str,str]) -> list[tuple[
+        str, str]] or dict or None:
         """
         Reconstruye una estructura JSON de diccionarios anidados a partir de una lista de tuplas (ruta, valor).
 
