@@ -15,10 +15,37 @@ log = logging.getLogger(__name__)
 
 from translator.utils.searches import search_path
 
-# LANG_PATTERN = re.compile(r"\b([a-z]{2}(-[a-z]{2})?)\b", re.IGNORECASE)
 
+def extract_first_primitive_value(data):
+    """
+    Navega a través de estructuras anidadas (diccionarios, listas, tuplas)
+    hasta encontrar el primer valor que no sea una de estas estructuras.
 
-PATTERN_JSON = r'^[a-z]{2}$'
+    Args:
+        data: Cualquier tipo de datos (diccionario, lista, tupla u otro)
+
+    Returns:
+        El primer valor primitivo encontrado o None si no hay ninguno
+    """
+    # Caso base: si es un tipo primitivo, retornar el valor
+    if not isinstance(data, (dict, list, tuple)):
+        return data
+
+    # Caso recursivo para diccionario
+    if isinstance(data, dict):
+        if not data:  # Diccionario vacío
+            return None
+        # Intentar con el primer elemento del diccionario
+        first_key = next(iter(data))
+        return extract_first_primitive_value(data[first_key])
+
+    # Caso recursivo para lista o tupla
+    elif isinstance(data, (list, tuple)):
+        if not data:  # Lista o tupla vacía
+            return None
+        # Intentar con el primer elemento de la lista/tupla
+        return extract_first_primitive_value(data[0])
+    return None
 
 
 class TranslateFile:
@@ -46,6 +73,8 @@ class TranslateFile:
 
         self._content: dict = {}
         self._backup: dict = {}
+
+        self.lang: Optional[str] = None
 
         self._extract_content()
 
@@ -102,36 +131,6 @@ class TranslateFile:
 
     @_handle_file_exceptions
     def _extract_content(self) -> None:
-        # self._content = {}  # Valor predeterminado en caso de error
-        #
-        # try:
-        #     with open(self.path, "r", encoding="utf-8") as f:
-        #         content = f.read()
-        #
-        #     # Intentar parsear como JSON primero
-        #     is_json, json_data = self._is_json(content)
-        #     if is_json:
-        #         self._content = json_data
-        #         return
-        #
-        #     # Intentar parsear como archivo i18n si no es JSON
-        #     is_i18n, i18n_data = self._is_i18n(content)
-        #     if is_i18n:
-        #         self._content = i18n_data
-        #         return
-        #
-        #     # Si llegamos aquí, no se pudo parsear el contenido
-        #     return
-        #
-        # except FileNotFoundError:
-        #     log.error(f"Error: El archivo {self.path} no existe")
-        #     return
-        # except PermissionError:
-        #     log.error(f"Error: No hay permisos para leer el archivo {self.path}")
-        #     return
-        # except Exception as e:
-        #     log.error(f"Error al leer el archivo {self.path}: {e}")
-        #     return
         """Extrae el contenido del archivo y lo convierte al formato adecuado."""
         with open(self.path, "r", encoding="utf-8") as f:
             content = f.read()
@@ -213,10 +212,41 @@ class TranslateFile:
 
 if __name__ == '__main__':
     # path = Path("struct_files/en.json")
-    tf = TranslateFile("struct_files/i18n.ts")
+    # tf = TranslateFile("struct_files/i18n.ts")
 
     # print(tf.path)
     # print(tf.directory)
     # print(tf.file)
     # print(tf.ext)
-    print(tf.content)
+    # print(tf.content)
+
+    print(extract_first_primitive_value({'greeting': {'hello': 'Hello', 'goodbye': 'Goodbye'}, 'errors': {
+        'network': {'timeout': 'The request has timed out. Please try again later.',
+                    'connection_lost': 'Connection to the server has been lost.',
+                    'server': {'unavailable': 'The server is currently unavailable.',
+                               'maintenance': 'The server is under maintenance. Please check back later.'}},
+        'validation': {'required': 'This field is required.', 'email': 'Please enter a valid email address.',
+                       'password': {'short': 'The password is too short.', 'weak': 'The password is too weak.',
+                                    'mismatch': 'Passwords do not match.'}}},
+                                         'menu': {'home': 'Home', 'about': 'About Us',
+                                                  'services': {'development': 'Development',
+                                                               'design': {'web': 'Web Design',
+                                                                          'graphic': 'Graphic Design'},
+                                                               'marketing': {'seo': 'SEO Optimization',
+                                                                             'social_media': 'Social Media Marketing',
+                                                                             'content': {'blogging': 'Blogging',
+                                                                                         'copywriting': 'Copywriting'}}},
+                                                  'contact': 'Contact Us'},
+                                         'notifications': {'success': 'Your action was successful.',
+                                                           'error': 'An error occurred. Please try again later.',
+                                                           'warning': {
+                                                               'low_battery': 'Low battery! Please charge your device.',
+                                                               'storage': 'Your storage is almost full.', 'nested': {
+                                                                   'alert1': {'alert2': {'alert3': {'alert4': {
+                                                                       'alert5': 'This is a deeply nested warning.'}}}}}}},
+                                         'footer': {'rights': 'All rights reserved.', 'terms': 'Terms of Service',
+                                                    'privacy': 'Privacy Policy', 'nested_links': {
+                                                 'social': {'facebook': 'Follow us on Facebook.',
+                                                            'twitter': 'Follow us on Twitter.'},
+                                                 'contact': {'email': 'Contact us via email.',
+                                                             'phone': 'Call us at: +1 234 567 890'}}}}))
