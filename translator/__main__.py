@@ -8,7 +8,7 @@ import logging
 from main import main
 
 logging.basicConfig(
-    level=logging.INFO,  # Establece el nivel mínimo de log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    level=logging.WARN,  # Establece el nivel mínimo de log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     format="[%(asctime)s] - [%(name)s] - [%(levelname)s] -> %(message)s",  # Formato del log
     handlers=[
         logging.StreamHandler(),  # Enviar mensajes al terminal

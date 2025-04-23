@@ -132,6 +132,7 @@ class LibreTranslate:
         try:
             response = requests.post(self.url_detect, json={'q':text}, headers=settings.HEADERS)
             response.raise_for_status()
+            print(response.json())
             return response.json()[0]['language']
         except requests.RequestException as e:
             log.error(f"Detection error: {e}")

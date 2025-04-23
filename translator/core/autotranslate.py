@@ -15,6 +15,7 @@ from translator.parses.tjson import JSON
 from translator.utils import TranslateFile
 
 log = logging.getLogger(__name__)
+log.setLevel(logging.WARNING)
 
 
 # config_logging(log, logging.WARNING)
@@ -303,12 +304,6 @@ class AutoTranslate:
                 or getattr(self.args, 'base', None)
                 or None
         )
-
-        if langs is None:
-            log.info("Detectando idioma")
-            with open(self.path, 'r') as f:
-                lang_file = self.api.detect_language(f.read())
-                log.warning("Idioma detectado: " + lang_file)
 
         lang_work = self._get_target_languages(langs, lang_file)
 

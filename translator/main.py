@@ -14,7 +14,9 @@ from translator.utils import TranslateFile
 
 from translator import AutoTranslate, Translator
 
+
 log = logging.getLogger(__name__)
+log.setLevel(logging.WARNING)
 
 def main():
     if len(sys.argv) > 1:
@@ -67,7 +69,7 @@ def handle_auto_translate(args):
     file_path = args.file
     if not file_path.exists():
         log.error(f"El archivo '{file_path}' no existe.")
-        return
+        raise FileNotFoundError(f"El archivo '{file_path}' no existe.")
 
     # Detectar el idioma base desde el nombre del archivo o usar --base
     info_file = TranslateFile(file_path)
