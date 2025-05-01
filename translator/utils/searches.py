@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Union, List
 
 
-def search_path(base_dir: Path, search_pattern: Path, all_matches: bool = False) -> Union[Path, List[Path], None]:
+def search_path(search_pattern: Path, base_dir: Path = None, all_matches: bool = False) -> Union[
+    Path, List[Path], None]:
     """
     Searches for a path pattern in the base directory and returns the first match
     or all matches.
@@ -24,6 +25,7 @@ def search_path(base_dir: Path, search_pattern: Path, all_matches: bool = False)
     Raises:
         ValueError: If the base directory doesn't exist or is not a directory
     """
+
     # Verify that the directory exists
     if not base_dir.exists() or not base_dir.is_dir():
         raise ValueError(f"The base directory '{base_dir}' doesn't exist or is not a directory")
