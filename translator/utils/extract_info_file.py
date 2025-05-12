@@ -67,7 +67,6 @@ class TranslateFile:
             path = Path(path).resolve()
 
         self.path: Path = path if not deep_search else search_path(base_dir or settings.BASE_DIR, path)
-        self.path: Path = search_path(settings.BASE_DIR, path)
         self._directory: Path = self.path.parent
         self._file, self._ext = path.name.split(".", 1)
         self._name: str = path.stem

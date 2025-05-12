@@ -163,6 +163,7 @@ class LibreTranslate:
             "target": target,
             "format": "text",
         }
+
         try:
             # with requests_cache.disabled():
             response = requests.post(self.url_translate, json=payload, timeout=self.retry_delay)

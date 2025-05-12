@@ -73,7 +73,6 @@ class AutoTranslate:
 
         # self.translations_dir = Path(meta.directory)
         # self.fileTranslation.directory.mkdir(parents=True, exist_ok=True)
-
         self.lang_work, self.confidence = self.api.detect_language(
             extract_first_primitive_value(self.fileTranslation.content)) or (
                                               'all', -1.0)
@@ -102,10 +101,10 @@ class AutoTranslate:
             if isinstance(langs_from_args, list):
                 if 'all' in langs_from_args:
                     return [lang for lang in
-                            self.language_support] if self.args.override else [lang for lang in self.language_support if
+                            self.language_support] if self.args.overwrite else [lang for lang in self.language_support if
                                                                                lang != lang_file]
                 return [lang for lang in langs_from_args if
-                        lang in self.language_support] if self.args.override else [lang for lang in langs_from_args if
+                        lang in self.language_support] if self.args.overwrite else [lang for lang in langs_from_args if
                                                                                    lang in self.language_support if
                                                                                    lang != lang_file]
 
@@ -276,6 +275,7 @@ class AutoTranslate:
                  unsupported file format is provided.
         :rtype: None
         """
+
         lang_file = (
                 base
                 or getattr(self.args, 'base', None)
@@ -283,6 +283,7 @@ class AutoTranslate:
         )
 
         lang_work = self._get_target_languages(langs, lang_file)
+
 
         if not lang_work:
             log.error("No se especificaron idiomas válidos para trabajar.")

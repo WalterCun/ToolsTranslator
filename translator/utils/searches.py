@@ -27,7 +27,7 @@ def search_path(search_pattern: Path, base_dir: Path = None, all_matches: bool =
     """
 
     # Verify that the directory exists
-    if not base_dir.exists() or not base_dir.is_dir():
+    if (not base_dir.exists() or not base_dir.is_dir())  :
         raise ValueError(f"The base directory '{base_dir}' doesn't exist or is not a directory")
 
     # Convert the search pattern to a string for comparisons
