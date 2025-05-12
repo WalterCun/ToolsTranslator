@@ -1,0 +1,23 @@
+### GET request to example server
+POST http://localhost:5000/detect
+Content-Type: application/json
+
+{
+  "q": "Hola Mundo"
+}
+
+#### GET request to example server
+GET http://localhost:5000/languages
+Content-Type: application/json
+
+### GET request to example server
+POST http://localhost:5000/translate
+Content-Type: application/json
+
+{
+  "q": "Hola Mundo",
+  "source": "auto",
+  "target": "es",
+  "format": "text",
+  "alternatives": 3
+}
