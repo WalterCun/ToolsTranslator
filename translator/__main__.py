@@ -39,7 +39,7 @@ if __name__ == "__main__":
         "translator",
         "auto-translate", "D:\Coders\harmonyhotel_web\src\i18n\es.json",
         "--output", "D:\Coders\harmonyhotel_web\src\i18n",
-        "--lang", "en", "fr",
+        "--lang", "en"
     ]
     main()
 

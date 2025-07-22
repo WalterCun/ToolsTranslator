@@ -54,7 +54,7 @@ class AutoTranslate:
         process is integrated with a language detection feature to provide insights
         and additional functionality.
 
-        :param file_translation: An instance of TranslateFile class that carries details
+        :param file_translation: An instance of the TranslateFile class that carries details
             of the file's content and related metadata necessary for processing the
             translation.
         :type file_translation: TranslateFile
