@@ -8,7 +8,7 @@ import logging
 from main import main
 
 logging.basicConfig(
-    level=logging.INFO,  # Establece el nivel mínimo de log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    level=logging.WARN,  # Establece el nivel mínimo de log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     format="[%(asctime)s] - [%(name)s] - [%(levelname)s] -> %(message)s",  # Formato del log
     handlers=[
         logging.StreamHandler(),  # Enviar mensajes al terminal
@@ -37,9 +37,9 @@ if __name__ == "__main__":
 
     sys.argv = [
         "translator",
-        "auto-translate", "D:\Coders\ToolsTranslator\struct_files\en.json",
-        "--lang", "es", "en", "fr",
-        '--output', 'D:\Coders\ToolsTranslator\struct_files\output',
+        "auto-translate", "D:\Coders\harmonyhotel_web\src\i18n\es.json",
+        "--output", "D:\Coders\harmonyhotel_web\src\i18n",
+        "--lang", "en"
     ]
     main()
 
