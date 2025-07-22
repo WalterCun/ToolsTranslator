@@ -59,10 +59,11 @@ dependencies = [
     "pydantic-settings>=2.8.0",
 ]
 
-keywords = ["traducción", "i18n", "automatización"]
+keywords = ["translate", "i18n", "automation"]
 
 [tool.setuptools.packages.find]
-where = ["translator"]
+where = ["."]
+include = ["translator*"]
 exclude = ["tests*", "docs*", 'struct_files*', 'examples*']
 
 [project.optional-dependencies]
@@ -79,5 +80,5 @@ yml = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/waltercun/ToolsTranslator"
-Repository = "https://github.com/waltercun/ToolsTranslator"
+Homepage = "https://github.com/WalterCun/ToolsTranslator.git"
+Repository = "https://github.com/WalterCun/ToolsTranslator.git"
