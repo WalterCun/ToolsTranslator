@@ -8,48 +8,19 @@ version = "0.1.5"
 description = "Una librería de soporte para traducir archivos i18n."
 readme = "README.md"
 authors = [{ name = "Walter Cun Bustamante", email = "waltercunbustamante@gmail.com" }]
-license = "MIT"
-license-files = ["LICEN[CS]E*"]
+license = {text = "MIT"}
 requires-python = ">=3.10"
 classifiers = [
-    # Lenguaje de programación compatible
-    #    "Programming Language :: Python :: 3",
-    #    "Programming Language :: Python :: 3.8",
-    #    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
-    #    "Programming Language :: Python :: 3.11",
-
-    # Licencia
-    "License :: OSI Approved :: MIT License",
-    # Sistema operativo compatible
     "Operating System :: OS Independent",
-    # Estado de desarrollo
-    # Alternativas:
-    # "Development Status :: 1 - Planning"
-    # "Development Status :: 2 - Pre-Alpha"
-    # "Development Status :: 3 - Alpha"
     "Development Status :: 4 - Beta",
-    # "Development Status :: 5 - Production/Stable"
-    # "Development Status :: 6 - Mature"
-
-    # Audiencia objetivo
     "Intended Audience :: Developers",
     "Intended Audience :: End Users/Desktop",
-    # Alternativas:
-    # "Intended Audience :: Education" (Proyectos educativos)
-    # "Intended Audience :: Information Technology" (Proyectos técnicos)
-
-    # Temas relacionados
     "Topic :: Software Development :: Libraries",
     "Topic :: Software Development :: Internationalization",
     "Topic :: Utilities",
     "Topic :: Text Processing :: Linguistic",
-    # Contexto de uso
     "Environment :: Console",
-    # "Environment :: Web Environment" (si es una app web)
-    # "Environment :: Desktop" (si es escritorio)
-
-    # Soporte para estándares de internacionalización
     "Natural Language :: English",
     "Natural Language :: Spanish",
 ]
@@ -60,11 +31,6 @@ dependencies = [
 ]
 
 keywords = ["translate", "i18n", "automation"]
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["translator*"]
-exclude = ["tests*", "docs*", 'struct_files*', 'examples*']
 
 [project.optional-dependencies]
 dev = [
@@ -80,5 +46,13 @@ yml = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/WalterCun/ToolsTranslator.git"
-Repository = "https://github.com/WalterCun/ToolsTranslator.git"
+Homepage = "https://github.com/WalterCun/ToolsTranslator"
+Repository = "https://github.com/WalterCun/ToolsTranslator"
+
+[tool.setuptools]
+py-modules = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["translator*"]
+exclude = ["tests*", "docs*", "struct_files*", "examples*"]
