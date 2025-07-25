@@ -20,12 +20,12 @@ log = logging.getLogger(__name__)
 if __name__ == "__main__":
     import sys
 
-    # sys.argv = [
-    #     "translator",
-    #     "auto-translate", "D:\Coders\ToolsTranslator\struct_files\en.json",
-    #     "--lang", "es"
-    # ]
-    # main()
+    sys.argv = [
+        "translator",
+        "auto-translate", "D:\Coders\ToolsTranslator\struct_files\en.json",
+        "--lang", "es"
+    ]
+
 
     # sys.argv = [
     #     "translator",
@@ -33,15 +33,15 @@ if __name__ == "__main__":
     #     "--lang", "es",
     #     '--output', 'D:\Coders\ToolsTranslator\struct_files\output',
     # ]
-    # main()
 
-    sys.argv = [
-        "translator",
-        "auto-translate", "D:\Coders\harmonyhotel_web\src\i18n\es.json",
-        "--output", "D:\Coders\harmonyhotel_web\src\i18n",
-        "--lang", "en"
-    ]
-    main()
+
+    # sys.argv = [
+    #     "translator",
+    #     "auto-translate", "D:\Coders\hhg-website\src\i18n\jes.json",
+    #     "--output", "D:\Coders\harmonyhotel_web\src\i18n",
+    #     "--lang", "en"
+    # ]
+
 
     # sys.argv = [
     #     "cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.json",
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     #     "--output", "D:\Coders\ToolsTranslator\struct_files\output",
     #     "--overwrite"
     # ]
-    # main()
+
     #
     # sys.argv = ["cli.py", "auto_translate", "D:\Coders\ToolsTranslator\struct_files\en.yml", "--lang", "br"]
-    # main()
+    main()

@@ -67,6 +67,25 @@ uv pip install .
 
 Con esto, todas las dependencias requeridas estarán instaladas en tu entorno virtual.
 
+### 6. Instalar dependencias externas (si es necesario)
+
+Si tu proyecto requiere el paquete `translation-tools`, puedes instalarlo usando:
+
+**Con pipenv:**
+```bash
+pipenv run pip install git+https://github.com/WalterCun/ToolsTranslator.git
+```
+
+**Con uv:**
+```bash
+uv pip install git+https://github.com/WalterCun/ToolsTranslator.git
+```
+
+**Con pip:**
+```bash
+pip install git+https://github.com/WalterCun/ToolsTranslator.git
+```
+
 ## Verificar la instalación
 
 Para verificar que todo está configurado correctamente:
@@ -75,6 +94,17 @@ Para verificar que todo está configurado correctamente:
 2. Asegúrate de que las dependencias estén instaladas correctamente revisando el archivo `requirements.txt` (si aplica)
    o verificando manualmente las dependencias.
 
+### Verificar translation-tools (si está instalado)
+
+```bash
+# Con pipenv
+pipenv run python -c "from translator import Translator; print('✅ Translation-tools instalado correctamente')"
+
+# Con uv o pip
+python -c "from translator import Translator; print('✅ Translation-tools instalado correctamente')"
+```
+
 ---
 
 ¡Listo! Ahora tu entorno de desarrollo está configurado y puedes comenzar a trabajar en el proyecto.
+```

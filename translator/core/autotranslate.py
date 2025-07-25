@@ -7,7 +7,7 @@ from argparse import Namespace
 from pathlib import Path
 from typing import Optional, Union, Dict, List
 
-from translator.parses.tyaml import YAML
+import importlib.util
 from translator.parses.tjson import JSON
 
 from translator.utils import TranslateFile
@@ -23,6 +23,13 @@ logging.basicConfig(
 
 log = logging.getLogger(__name__)
 
+# Check if YAML package is available
+try:
+    if importlib.util.find_spec('yaml'):
+        from translator.parses.tyaml import YAML
+except ImportError:
+    YAML = None
+    log.warning("YAML package is not available. Please install 'pyyaml' package to process YAML files.")
 
 class AutoTranslate:
     """
@@ -217,6 +224,9 @@ class AutoTranslate:
             serialized = json_instance.serializer_json(data)
             return {k: v for k, v in serialized} if to_dict else serialized
         elif self.fileTranslation.ext.lower() in ('yaml', 'yml'):
+            if YAML is None:
+                log.error("YAML package is not available. Please install 'pyyaml' package to process YAML files.")
+                return {} if to_dict else []
             yml_instance = YAML(str(file_path))
             data = yml_instance.get_content_yaml_file()
             return yml_instance.serializer_yaml(data)

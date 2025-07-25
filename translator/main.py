@@ -76,7 +76,7 @@ def handle_auto_translate(args):
     file_path = args.file
     if not file_path.exists():
         log.error(f"El archivo '{file_path}' no existe.")
-        raise FileNotFoundError(f"El archivo '{file_path}' no existe.")
+        sys.exit(404)
 
     # Detectar el idioma base desde el nombre del archivo o usar --base
     info_file = TranslateFile(file_path)

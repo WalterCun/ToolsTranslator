@@ -10,7 +10,7 @@ import os
 import logging
 from time import sleep
 
-from tools.docker_tool import is_docker_installed, is_docker_running
+from translator.tools.docker_tool import is_docker_installed, is_docker_running
 
 # Configuración de logs
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
