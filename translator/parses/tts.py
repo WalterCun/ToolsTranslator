@@ -44,7 +44,8 @@ class TypeScriptI18n:
             return match.group(1)
         return None
     
-    def ts_to_dict(self, ts_content: str) -> Dict:
+    @staticmethod
+    def ts_to_dict(ts_content: str) -> Dict:
         """
         Convierte un objeto JavaScript/TypeScript a un diccionario de Python.
         
