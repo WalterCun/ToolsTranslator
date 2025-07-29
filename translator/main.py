@@ -25,10 +25,22 @@ logging.basicConfig(
 
 log = logging.getLogger(__name__)
 
+def get_version():
+    """Obtiene la versión del proyecto"""
+    from translator.__version import __version__ as version
+    return version
+
+
 def main():
     if len(sys.argv) > 1:
         parser = argparse.ArgumentParser(description="Herramienta CLI para manejar archivos de traducciones")
         subparsers = parser.add_subparsers(dest="command", required=True)
+
+        parser.add_argument(
+            '--version', '-v',
+            action='version',
+            version=f'translation-tools {get_version()}'
+        )
 
         # Subcomando para agregar texto
         add_parser = subparsers.add_parser("add", help="Agregar una nueva traducción")
@@ -49,11 +61,15 @@ def main():
         auto_translate_parser.add_argument("--overwrite", action="store_true", help="Sobreescribir traducciones")
         args = parser.parse_args(sys.argv[1:])
 
+        if args.command == "version":
+            print(f"translation-tools {get_version()}")
+            return
         if args.command == "add":
             handle_add_text(args)
         elif args.command == "auto-translate":
             handle_auto_translate(args)
-
+        else:
+            parser.print_help()
 
 def handle_add_text(args):
     """ Maneja el comando 'add' para agregar traducciones. """

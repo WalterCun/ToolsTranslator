@@ -3,13 +3,16 @@
 
 """ translator/__init__.py """
 
-__version__ = "0.1.5"
-
 from .core.translate import Translator
 from .config import settings
 from .api.translate_api import LibreTranslate
 
-# Importación condicional de AutoTranslate
+from .__version import __version__
+
+__author__ = "Walter Cun Bustamante"
+__email__ = "waltercunbustamante@gmail.com"
+
+
 try:
     from .core.autotranslate import AutoTranslate
     __all__ = ['AutoTranslate', 'Translator', 'settings', 'LibreTranslate']

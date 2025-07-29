@@ -4,8 +4,9 @@
 """ translator/__main__.py """
 
 import logging
+import sys
 
-from main import main
+from translator.main import main
 
 logging.basicConfig(
     level=logging.WARN,  # Establece el nivel mínimo de log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
@@ -18,11 +19,11 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    import sys
-
+#     import sys
+#
     sys.argv = [
         "translator",
-        "auto-translate", "D:\Coders\ToolsTranslator\struct_files\en.json",
+        "auto-translate", r"D:\Coders\ToolsTranslator\struct_files\en.json",
         "--lang", "es"
     ]
 
