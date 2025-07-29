@@ -23,7 +23,7 @@ logging.basicConfig(
 
 log = logging.getLogger(__name__)
 
-# Check if YAML package is available
+# Check if the YAML package is available
 try:
     if importlib.util.find_spec('yaml'):
         from translator.parses.tyaml import YAML
@@ -167,7 +167,8 @@ class AutoTranslate:
             log.error(f"Error al traducir {key}: {e}")
             return None
 
-    def _save_translated_data(self, output_file: Path, translated_data: List[tuple[str, str]] or Dict[str,str]):
+    @staticmethod
+    def _save_translated_data(output_file: Path, translated_data: List[tuple[str, str]] or Dict[str,str]):
         """
         Saves translated data to a specified JSON output file. This function serializes
         the provided translated data and writes it to the target file path.

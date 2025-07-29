@@ -171,6 +171,7 @@ class Translator:
         """
         Agrega una traducción para una clave en un idioma específico.
 
+        :param force:
         :param key: La clave identificadora de la traducción.
         :param lang: El idioma de la traducción (e.g., 'en', 'es', 'fr').
         :param value: El texto traducido.
