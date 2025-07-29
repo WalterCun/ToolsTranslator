@@ -14,7 +14,7 @@ from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 from translator.config import settings
-from verify_docker_tool import ensure_docker
+from ..tools.verify_docker_tool import validator_docker_container
 
 log = logging.getLogger(__name__)
 
@@ -54,6 +54,7 @@ class LibreTranslate:
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         self.session = self._configure_session()
+        validator_docker_container()
 
     def _configure_session(self):
         # Configuramos una sesión para reutilizar conexiones y mejorar el rendimiento
@@ -68,7 +69,7 @@ class LibreTranslate:
             allowed_methods=["HEAD", "GET", "OPTIONS", "POST"]
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
-        session.mount("https://", adapter)
+        # session.mount("https://", adapter)
         session.mount("http://", adapter)
         return session
 
@@ -82,7 +83,7 @@ class LibreTranslate:
         failures.
 
         :return: A JSON object containing the supported languages.
-        :rtype: dict
+        :rtype: Dict
         :raises Exception: If an error occurs during the HTTP request.
         """
         log.info("Solicitando lista de idiomas soportados...")
@@ -125,7 +126,7 @@ class LibreTranslate:
             return languages
         except Exception as e:
             log.error(f"Error al obtener idiomas: {str(e)}")
-            ensure_docker()
+            # validator_docker_container()
             return self.get_supported_languages(lang_base, to_list)
 
     def detect_language(self, text) -> str | tuple[Any, Any]:
@@ -181,7 +182,7 @@ class LibreTranslate:
             #     log.error(f"Error: {response.status_code}, {response.content}")
         except requests.RequestException as e:
             log.error(f"Translation error: {e}")
-            ensure_docker()
+            # validator_docker_container()
             if retry < self.max_retries:
                 log.info(f"Retrying translation (attempt {retry + 1}/{self.max_retries})")
                 return self.translate(text, source, target, retry + 1)
