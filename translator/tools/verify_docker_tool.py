@@ -10,6 +10,7 @@ import os
 import logging
 from time import sleep
 
+from docker_tool import manage_libretranslate
 from translator.tools.docker_tool import is_docker_installed, is_docker_running
 
 # Configuración de logs
@@ -86,7 +87,7 @@ def start_docker():
         sys.exit(1)
 
 
-def ensure_docker():
+def validator_docker_container():
     """Verifica Docker e intenta instalarlo o iniciarlo si es necesario."""
     if not is_docker_installed():
         logging.warning("Docker no está instalado.")
@@ -94,10 +95,10 @@ def ensure_docker():
     elif not is_docker_running():
         logging.warning("Docker está instalado pero no en ejecución.")
         start_docker()
-        sleep(10)
+        sleep(20)
     else:
         logging.info("Docker está instalado y en ejecución.")
+    manage_libretranslate()
 
-
-if __name__ == "__main__":
-    ensure_docker()
+# if __name__ == "__main__":
+#     ensure_docker()

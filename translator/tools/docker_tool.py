@@ -13,6 +13,8 @@ from typing import Dict, List, Any, Iterator
 from pathlib import Path
 import tempfile
 import os
+
+import requests
 from colorlog import basicConfig
 
 basicConfig(
@@ -88,31 +90,6 @@ def get_libretranslate_status() -> Dict[str, Any]:
         'can_install': False
     }
     log.info(f'Status Info Star: {status_info}')
-
-    if not is_docker_installed():
-        log.info("Docker no está instalado.")
-        # noinspection PyTypeChecker
-        status_info.update({
-            'status': ContainerStatus.ERROR,
-            'action_needed': 'install_docker',
-            'message': 'Docker no está instalado en el sistema',
-            'can_install': True
-        })
-        log.info(f'Status Docker Installed: {status_info}')
-        return status_info
-    log.info("Docker está instalado.")
-
-    if not is_docker_running():
-        log.warning("Docker no está corriendo.")
-        # noinspection PyTypeChecker
-        status_info.update({
-            'status': ContainerStatus.DOCKER_NOT_RUNNING,
-            'action_needed': 'start_docker',
-            'message': 'Docker está instalado pero no está ejecutándose',
-        })
-        log.info(f'Status Docker Running: {status_info}')
-        return status_info
-    log.info("Docker está corriendo.")
 
     # Buscar todos los contenedores LibreTranslate
     log.info("Buscando todos los contenedores LibreTranslate...")
@@ -289,51 +266,6 @@ def start_libretranslate_container(container_id: str = None, status_data: dict =
         log.info(f"Error al iniciar contenedor: {e}")
 
     return result
-
-
-# def get_libretranslate_container_info(container_name: str = "libretranslate") -> Dict:
-#     """
-#     Obtiene información detallada del contenedor de LibreTranslate.
-#
-#     :param container_name: Nombre del contenedor
-#     :return: Diccionario con información del contenedor
-#     """
-#     info = {
-#         'running': False,
-#         'container_id': None,
-#         'ports': [],
-#         'status': None,
-#         'image': None,
-#         'error': ''
-#     }
-#
-#     if not is_docker_running():
-#         info['error'] = 'Docker no está ejecutándose'
-#         return info
-#
-#     try:
-#         # Obtener información del contenedor
-#         result = subprocess.run([
-#             "docker", "ps", "--filter", f"name={container_name}",
-#             "--format", "{{json .}}"
-#         ], capture_output=True, text=True, check=True)
-#
-#         if result.stdout.strip():
-#             container_data = json.loads(result.stdout.strip().split('\n')[0])
-#             info.update({
-#                 'running': True,
-#                 'container_id': container_data.get('ID', '')[:12],
-#                 'ports': container_data.get('Ports', ''),
-#                 'status': container_data.get('Status', ''),
-#                 'image': container_data.get('Image', ''),
-#                 'names': container_data.get('Names', '')
-#             })
-#
-#     except (subprocess.CalledProcessError, json.JSONDecodeError, IndexError) as e:
-#         log.error(f"Error al obtener información del contenedor: {e}")
-#         info['error'] = str(e)
-#
-#     return info
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -525,22 +457,19 @@ def stream_command_output(command: list, cwd: str = None) -> Iterator[str]:
 
 
 def build_libretranslate_cuda_image(
-    repo_path: Path, 
-    image_name: str = "libretranslate",
-    image_tag: str = "latest"
+        repo_path: Path,
+        image_name: str = "libretranslate",
+        image_tag: str = "latest"
 ) -> Dict[str, Any]:
     """
     Construye la imagen Docker de LibreTranslate con soporte CUDA.
-    
-    :param repo_path: Ruta al repositorio clonado
-    :param image_name: Nombre personalizado para la imagen
-    :param image_tag: Tag para la imagen (ej: latest, v1.0, cuda)
-    :return: Resultado de la construcción
     """
     log.warning(f"*** Construyendo imagen Docker de LibreTranslate con soporte CUDA ***")
 
-    full_image_name = f"{image_name}"
-    
+    # ✅ Usar nombre de proyecto fijo
+    project_name = "libretranslate"  # Nombre fijo
+    full_image_name = f"{image_name}:{image_tag}"
+
     result = {
         'success': False,
         'message': '',
@@ -555,24 +484,39 @@ def build_libretranslate_cuda_image(
 
         dockerfile_path = Path("docker-compose.cuda.yml")
         exists = dockerfile_path.exists()
-        log.warning(f'Validando el {dockerfile_path} para construir la imagen: {exists}')
+        log.warning(f'Validando el {dockerfile_path}: {exists}')
 
         if exists:
+            # ✅ Verificar si ya existe una imagen/contenedor corriendo
+            existing_containers = find_all_libretranslate_containers()
+            if existing_containers:
+                log.info(f"Encontrados {len(existing_containers)} contenedores existentes")
+
+                # Si hay contenedores corriendo, no crear nuevos
+                running_containers = [c for c in existing_containers if c['state'].lower() in ['running', 'up']]
+                if running_containers:
+                    result.update({
+                        'success': True,
+                        'message': f'LibreTranslate ya está ejecutándose: {running_containers[0]["name"]}',
+                        'image_name': running_containers[0]['image'],
+                        'container_reused': True
+                    })
+                    return result
+
             try:
-                log.info(f"Construyendo LibreTranslate Docker con nombre: {full_image_name}")
-                log.debug('*'*100)
-                log.debug(str(dockerfile_path))
-                log.debug('*'*100)
-                # Modificar docker-compose para usar nombre personalizado# docker compose -f docker-compose.cuda.yml up -d --build
+                # ✅ Comando con nombre de proyecto fijo
                 build_command = [
                     "docker", "compose",
                     "-f", str(dockerfile_path),
-                    "-p", image_name,  # Proyecto personalizado
+                    "-p", project_name,  # ✅ Nombre fijo
                     "up", '-d',
                     "--build"
                 ]
 
                 log.critical(f"Execute: {' '.join(build_command)}")
+
+                # Modificar docker-compose para usar nombre personalizado# docker compose -f docker-compose.cuda.yml up -d --build
+
                 log.debug("\n" + "=" * 60)
                 log.debug(f"🔨 CONSTRUYENDO IMAGEN: {full_image_name}")
                 log.debug("=" * 60)
@@ -592,7 +536,7 @@ def build_libretranslate_cuda_image(
                             log.info(f"BUILD SUCCESS: {line}")
 
                     # Después de construir, renombrar la imagen si es necesario
-                    rename_result = rename_docker_image_after_build(image_name, full_image_name)
+                    rename_result = rename_docker_image_after_build(project_name, full_image_name)
                     if rename_result['success']:
                         log.info(f"Imagen renombrada exitosamente a: {full_image_name}")
 
@@ -643,24 +587,24 @@ def rename_docker_image_after_build(project_name: str, target_name: str) -> Dict
     :return: Resultado de la operación
     """
     result = {'success': False, 'message': ''}
-    
+
     try:
         # Buscar imagen construida por docker-compose
         list_result = subprocess.run([
             "docker", "images", "--filter", f"reference={project_name}*",
             "--format", "{{.Repository}}:{{.Tag}}"
         ], capture_output=True, text=True, check=True)
-        
+
         if list_result.stdout.strip():
             source_image = list_result.stdout.strip().split('\n')[0]
-            
+
             # Renombrar imagen
             subprocess.run([
                 "docker", "tag", source_image, target_name
             ], check=True, capture_output=True, text=True)
-            
+
             log.info(f"Imagen renombrada de {source_image} a {target_name}")
-            
+
             result.update({
                 'success': True,
                 'message': f'Imagen renombrada exitosamente a {target_name}',
@@ -669,19 +613,19 @@ def rename_docker_image_after_build(project_name: str, target_name: str) -> Dict
             })
         else:
             result['message'] = f'No se encontró imagen construida con prefijo {project_name}'
-            
+
     except subprocess.CalledProcessError as e:
         result['message'] = f'Error renombrando imagen: {e.stderr}'
         log.error(f"Error renombrando imagen: {e}")
-    
+
     return result
 
 
 def run_libretranslate_container_from_image(
-    image_name: str, 
-    container_name: str = "libretranslate-custom",
-    port_mapping: str = "5000:5000",
-    additional_args: List[str] = None
+        image_name: str,
+        container_name: str = "libretranslate-custom",
+        port_mapping: str = "5000:5000",
+        additional_args: List[str] = None
 ) -> Dict[str, Any]:
     """
     Ejecuta un contenedor LibreTranslate desde una imagen construida.
@@ -711,16 +655,16 @@ def run_libretranslate_container_from_image(
 
         # Construir comando base
         run_command = [
-            "docker", "run", "-d", 
-            "--name", container_name, 
-            "-p", port_mapping, 
+            "docker", "run", "-d",
+            "--name", container_name,
+            "-p", port_mapping,
             "--restart", "unless-stopped"
         ]
-        
+
         # Agregar argumentos adicionales si existen
         if additional_args:
             run_command.extend(additional_args)
-            
+
         # Agregar nombre de imagen al final
         run_command.append(image_name)
 
@@ -740,6 +684,243 @@ def run_libretranslate_container_from_image(
             'message': f'Contenedor {container_name} iniciado correctamente desde {image_name}',
             'container_id': container_id[:12],
             'container_name': container_name,
+            'port_mapping': port_mapping
+        })
+
+    except subprocess.CalledProcessError as e:
+        result['message'] = f'Error al ejecutar contenedor: {e.stderr}'
+        log.error(f"Error ejecutando contenedor: {e}")
+
+    return result
+
+
+def cleanup_duplicate_images(keep_latest: bool = True) -> Dict[str, Any]:
+    """
+    Limpia imágenes Docker duplicadas manteniendo solo la más reciente.
+
+    :param keep_latest: Si mantener la imagen más reciente
+    :return: Resultado de la limpieza
+    """
+    log.warning("*** Limpiando imágenes Docker duplicadas ***")
+
+    result = {'success': False, 'removed_images': [], 'kept_images': []}
+
+    try:
+        # Obtener todas las imágenes libretranslate
+        list_result = subprocess.run([
+            "docker", "images",
+            "--filter", "reference=*libretranslate*",
+            "--format", "{{.ID}}\t{{.Repository}}:{{.Tag}}\t{{.CreatedAt}}"
+        ], capture_output=True, text=True, check=True)
+
+        if not list_result.stdout.strip():
+            result['message'] = 'No se encontraron imágenes LibreTranslate'
+            result['success'] = True
+            return result
+
+        images_info = []
+        for line in list_result.stdout.strip().split('\n'):
+            parts = line.split('\t')
+            if len(parts) >= 3:
+                images_info.append({
+                    'id': parts[0][:12],
+                    'name': parts[1],
+                    'created': parts[2]
+                })
+
+        # Agrupar por ID (mismo contenido)
+        images_by_id = {}
+        for img in images_info:
+            if img['id'] not in images_by_id:
+                images_by_id[img['id']] = []
+            images_by_id[img['id']].append(img)
+
+        # Limpiar duplicados
+        for image_id, images in images_by_id.items():
+            if len(images) > 1:
+                # Ordenar por fecha de creación y mantener la más reciente
+                images.sort(key=lambda x: x['created'], reverse=True)
+
+                if keep_latest:
+                    kept_image = images[0]
+                    duplicates = images[1:]
+                    result['kept_images'].append(kept_image['name'])
+                else:
+                    duplicates = images
+
+                # Remover duplicados
+                for duplicate in duplicates:
+                    try:
+                        subprocess.run([
+                            "docker", "rmi", duplicate['name']
+                        ], check=True, capture_output=True)
+
+                        result['removed_images'].append(duplicate['name'])
+                        log.info(f"Imagen removida: {duplicate['name']}")
+
+                    except subprocess.CalledProcessError as e:
+                        log.warning(f"No se pudo remover {duplicate['name']}: {e}")
+
+        result.update({
+            'success': True,
+            'message': f"Limpieza completada. Removidas: {len(result['removed_images'])}, Mantenidas: {len(result['kept_images'])}"
+        })
+
+    except subprocess.CalledProcessError as e:
+        result['message'] = f'Error durante la limpieza: {e.stderr}'
+        log.error(f"Error en limpieza: {e}")
+
+    return result
+
+
+def find_existing_libretranslate_images() -> List[Dict]:
+    """
+    Busca todas las imágenes LibreTranslate disponibles localmente.
+
+    :return: Lista de imágenes encontradas con su información
+    """
+    log.warning("*** Buscando imágenes LibreTranslate existentes ***")
+
+    images = []
+
+    if not is_docker_running():
+        return images
+
+    try:
+        # Buscar imágenes con diferentes patrones
+        search_patterns = [
+            "*libretranslate*",
+            "libretranslate/*",
+            "*libretranslate*/*"
+        ]
+
+        for pattern in search_patterns:
+            result = subprocess.run([
+                "docker", "images",
+                "--filter", f"reference={pattern}",
+                "--format", "{{.ID}}\t{{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"
+            ], capture_output=True, text=True, check=True)
+
+            if result.stdout.strip():
+                for line in result.stdout.strip().split('\n'):
+                    parts = line.split('\t')
+                    if len(parts) >= 4:
+                        image_info = {
+                            'id': parts[0][:12],
+                            'repository': parts[1],
+                            'tag': parts[2],
+                            'full_name': f"{parts[1]}:{parts[2]}",
+                            'size': parts[3] if len(parts) > 3 else 'unknown',
+                            'created': parts[4] if len(parts) > 4 else 'unknown'
+                        }
+
+                        # Evitar duplicados
+                        if not any(
+                                img['id'] == image_info['id'] and img['full_name'] == image_info['full_name'] for img in
+                                images):
+                            images.append(image_info)
+
+        log.info(f"Encontradas {len(images)} imágenes LibreTranslate locales")
+        for img in images:
+            log.info(f"  - {img['full_name']} (ID: {img['id']}, Size: {img['size']})")
+
+    except subprocess.CalledProcessError as e:
+        log.error(f"Error buscando imágenes: {e}")
+
+    return images
+
+
+def run_container_from_existing_image(
+        image_info: Dict,
+        container_name: str = None,
+        port_mapping: str = "5000:5000",
+        additional_args: List[str] = None
+) -> Dict[str, Any]:
+    """
+    Ejecuta un contenedor desde una imagen existente.
+
+    :param image_info: Información de la imagen (del resultado de find_existing_libretranslate_images)
+    :param container_name: Nombre personalizado para el contenedor
+    :param port_mapping: Mapeo de puertos
+    :param additional_args: Argumentos adicionales
+    :return: Resultado de la ejecución
+    """
+    log.warning(f"*** Ejecutando contenedor desde imagen existente {image_info['full_name']} ***")
+
+    # Generar nombre de contenedor si no se proporciona
+    if not container_name:
+        repo_clean = image_info['repository'].replace('/', '-').replace(':', '-')
+        container_name = f"{repo_clean}-{image_info['tag']}"
+
+    result = {'success': False, 'message': '', 'container_id': None}
+
+    try:
+        # Verificar si ya existe un contenedor con ese nombre
+        existing_check = subprocess.run([
+            "docker", "ps", "-a", "--filter", f"name={container_name}", "--format", "{{.Names}}"
+        ], capture_output=True, text=True)
+
+        if container_name in existing_check.stdout:
+            log.info(f"Contenedor {container_name} ya existe")
+
+            # Verificar si está corriendo
+            running_check = subprocess.run([
+                "docker", "ps", "--filter", f"name={container_name}", "--format", "{{.Names}}"
+            ], capture_output=True, text=True)
+
+            if container_name in running_check.stdout:
+                result.update({
+                    'success': True,
+                    'message': f'Contenedor {container_name} ya está ejecutándose',
+                    'container_name': container_name,
+                    'container_reused': True
+                })
+                return result
+            else:
+                # Iniciar contenedor existente
+                log.info(f"Iniciando contenedor existente {container_name}")
+                subprocess.run(["docker", "start", container_name], check=True, capture_output=True)
+
+                result.update({
+                    'success': True,
+                    'message': f'Contenedor existente {container_name} iniciado correctamente',
+                    'container_name': container_name,
+                    'container_restarted': True
+                })
+                return result
+
+        # Crear nuevo contenedor
+        log.info(f"Creando nuevo contenedor desde imagen: {image_info['full_name']}")
+
+        run_command = [
+            "docker", "run", "-d",
+            "--name", container_name,
+            "-p", port_mapping,
+            "--restart", "unless-stopped"
+        ]
+
+        if additional_args:
+            run_command.extend(additional_args)
+
+        run_command.append(image_info['full_name'])
+
+        log.critical(f"Ejecutando: {' '.join(run_command)}")
+
+        result_run = subprocess.run(
+            run_command,
+            check=True,
+            capture_output=True,
+            text=True
+        )
+
+        container_id = result_run.stdout.strip()
+
+        result.update({
+            'success': True,
+            'message': f'Contenedor {container_name} creado correctamente desde {image_info["full_name"]}',
+            'container_id': container_id[:12],
+            'container_name': container_name,
+            'image_used': image_info['full_name'],
             'port_mapping': port_mapping
         })
 
@@ -825,58 +1006,157 @@ def install_libretranslate() -> dict[str, bool | str | None] | None:
     return result
 
 
+def install_libretranslate_smart() -> Dict[str, Any]:
+    """
+    Instala LibreTranslate priorizando imágenes existentes, luego repositorio, luego Docker Hub.
+
+    :return: Resultado de la instalación
+    """
+    log.warning("*** Instalación inteligente de LibreTranslate ***")
+    result = {'success': False, 'message': '', 'method': None}
+
+    try:
+        # ✅ OPCIÓN 1: Usar imagen existente local
+        log.warning("=== OPCIÓN 1: Buscando imágenes locales ===")
+
+        existing_images = find_existing_libretranslate_images()
+        if existing_images:
+            log.info(f"Encontradas {len(existing_images)} imágenes locales")
+
+            # Usar la primera imagen encontrada (puedes agregar lógica para elegir la mejor)
+            best_image = existing_images[0]  # O implementar lógica de selección
+
+            run_result = run_container_from_existing_image(best_image)
+            if run_result['success']:
+                result.update({
+                    'success': True,
+                    'message': f'LibreTranslate ejecutado desde imagen local: {best_image["full_name"]}',
+                    'method': 'existing_image',
+                    'image_used': best_image['full_name'],
+                    'container_name': run_result['container_name']
+                })
+                return result
+            else:
+                log.warning(f"No se pudo usar imagen local: {run_result['message']}")
+
+        # ✅ OPCIÓN 2: Descargar imagen oficial de Docker Hub (más rápido que compilar)
+        log.warning("=== OPCIÓN 2: Descargando imagen oficial ===")
+        try:
+            log.info("Descargando imagen oficial de LibreTranslate...")
+
+            # Primero descargar la imagen
+            subprocess.run([
+                "docker", "pull", "libretranslate/libretranslate:latest"
+            ], check=True, capture_output=True, text=True)
+
+            # Luego ejecutarla
+            subprocess.run([
+                "docker", "run", "-d", "--name", "libretranslate-official",
+                "-p", "5000:5000", "--restart", "unless-stopped",
+                "libretranslate/libretranslate:latest"
+            ], check=True, capture_output=True, text=True)
+
+            result.update({
+                'success': True,
+                'message': 'LibreTranslate instalado desde Docker Hub',
+                'method': 'docker_hub_official',
+                'image_used': 'libretranslate/libretranslate:latest',
+                'container_name': 'libretranslate-official'
+            })
+            return result
+
+        except subprocess.CalledProcessError as e:
+            log.warning(f"Error descargando imagen oficial: {e.stderr}")
+
+        # ✅ OPCIÓN 3: Compilar desde repositorio (último recurso)
+        log.warning("=== OPCIÓN 3: Compilando desde repositorio ===")
+
+        temp_dir = Path(tempfile.mkdtemp(prefix="libretranslate_"))
+        log.info(f"Directorio temporal creado: {temp_dir}")
+
+        clone_result = clone_libretranslate_repo(temp_dir)
+        if clone_result['success']:
+            build_result = build_libretranslate_cuda_image(clone_result['repo_path'])
+            if build_result['success']:
+                result.update({
+                    'success': True,
+                    'message': 'LibreTranslate compilado desde repositorio',
+                    'method': 'repository_build',
+                    'cleanup_temp': True
+                })
+                return result
+
+        # Si todo falla
+        result['message'] = 'No se pudo instalar LibreTranslate con ningún método'
+
+    except Exception as e:
+        log.error(f"Error en instalación inteligente: {e}")
+        result['message'] = str(e)
+
+    return result
+
 
 # ---------------------------------------------------------------------------------------------------------------------
+
+def is_service_running():
+    """Verifica si LibreTranslate está corriendo en localhost:5000."""
+    wait_time = 1
+    max_wait = 60
+
+    while wait_time <= max_wait:
+        try:
+            response = requests.get("http://localhost:5000", timeout=5)
+            log.critical(f'Response: {response}')
+            if response.status_code == 200:
+                return True
+            # wait_time *= 2
+            # time.sleep(wait_time)
+        except requests.RequestException:
+            wait_time *= 2
+            log.error(f'Request time spleep: {wait_time}')
+            time.sleep(wait_time)
+
+    return False
+
 
 def manage_libretranslate() -> Dict:
     """
     Función principal que gestiona LibreTranslate automáticamente.
-
-    :return: Resultado de las acciones realizadas
     """
-
     status = get_libretranslate_status()
-
     log.info(f'Info Status {status["status"]}')
 
-    action_result = {'status': status['status'], 'action_taken': None, 'result': None}
+    action_result = status
+    action_result['action_taken'] = None
+    action_result['result'] = None
 
-    log.info(f"Action Result: {action_result}")
-
-    if status['action_needed'] == 'install_docker':
-        log.info("Intentando instalar Docker...")
-        # TODO: Programmer install Docker console windows, linux or mac
+    # Verificar si ya hay contenedores corriendo
+    if status['running_containers']:
+        log.info("LibreTranslate ya está ejecutándose")
         action_result.update({
-            'action_taken': 'docker_installation',
-            'result': {'success': False, 'message': 'Docker debe instalarse manualmente'}
+            'action_taken': 'no_action_needed',
+            'result': {'success': True, 'message': 'LibreTranslate ya está activo'}
         })
+        action_result['status_connect'] = is_service_running()
+        return action_result
 
-    elif status['action_needed'] == 'start_docker':
-        # TODO: Programmer start Docker console windows, linux or mac
-        action_result.update({
-            'action_taken': 'docker_start',
-            'result': {'success': False, 'message': 'Docker debe iniciarse manualmente'}
-        })
-
-    elif status['action_needed'] == 'start_container':
-        log.info("Intentando iniciar contenedor LibreTranslate...")
+    if status['action_needed'] == 'start_container':
+        log.info("Iniciando contenedor existente...")
         result = start_libretranslate_container(status_data=status)
-        log.info(f'Result method start_libretranslate_container: {result}')
         action_result.update({
             'action_taken': 'start_container',
             'result': result
         })
 
     elif status['action_needed'] == 'install_libretranslate':
-        log.info("Intentando instalar LibreTranslate...")
-        result = install_libretranslate()
+        log.info("Instalando LibreTranslate con método inteligente...")
+
+        # ✅ Usar la nueva función inteligente
+        result = install_libretranslate_smart()
         action_result.update({
-            'action_taken': 'install_libretranslate',
+            'action_taken': 'install_libretranslate_smart',
             'result': result
         })
 
+    action_result['status_connect'] = is_service_running()
     return action_result
-
-
-if __name__ == "__main__":
-    print(manage_libretranslate())
