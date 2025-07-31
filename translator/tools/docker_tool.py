@@ -14,16 +14,13 @@ Version: 2.0
 import subprocess
 import logging
 import json
-import threading
 import time
 import os
 import tempfile
-from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Any, Iterator, Optional, Tuple
+from typing import Dict, List, Any, Iterator, Optional
 from pathlib import Path
 from dataclasses import dataclass, asdict
-from contextlib import contextmanager
 
 import requests
 from colorlog import basicConfig
@@ -722,7 +719,7 @@ class LibreTranslateInstaller:
             repo_path: Path to cloned repository
 
         Returns:
-            OperationResult: Build operation result
+            OperationResult: Build an operation result
         """
         log.info("Building LibreTranslate CUDA image")
 
@@ -734,7 +731,7 @@ class LibreTranslateInstaller:
             log.info(f"Changed to directory: {repo_path}")
 
             # Check if docker-compose.cuda.yml exists
-            dockerfile_path = repo_path / DOCKER_COMPOSE_FILE
+            dockerfile_path = Path(DOCKER_COMPOSE_FILE)
             if not dockerfile_path.exists():
                 return OperationResult(
                     success=False,
@@ -827,7 +824,7 @@ class LibreTranslateInstaller:
                 error=str(e)
             )
         finally:
-            # Restore original working directory
+            # Restore the original working directory
             os.chdir(original_cwd)
 
     def _stream_command_output(self, command: List[str], cwd: Optional[str] = None) -> Iterator[str]:
@@ -904,7 +901,7 @@ class LibreTranslateInstaller:
             if result.stdout.strip():
                 source_image = result.stdout.strip().split('\n')[0]
 
-                # Tag with new name
+                # Tag with a new name
                 self.docker.execute_docker_command([
                     "docker", "tag", source_image, target_name
                 ])

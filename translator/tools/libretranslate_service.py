@@ -3,13 +3,8 @@
 
 """ translator/tools/libretranslate_service.py """
 
-import os
-import subprocess
 import logging
-import time
 import requests
-
-from translator.tools.verify_docker_tool import validator_docker_container
 
 # Configuración de logs
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -17,6 +12,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 LIBRETRANSLATE_REPO = "https://github.com/LibreTranslate/LibreTranslate"
 SERVICE_URL = "http://localhost:5000"
 REPO_DIR = "LibreTranslate"
+
 
 def is_service_running():
     """Verifica si LibreTranslate está corriendo en localhost:5000."""
@@ -46,7 +42,7 @@ def is_service_running():
 #         logging.warning("Error con CUDA, intentando con la configuración estándar...")
 #         subprocess.run(["docker", "compose", "-f", "docker-compose.yml", "up", "-d", "--build"], check=True)
 
-    # os.chdir("..")  # Volver al directorio original
+# os.chdir("..")  # Volver al directorio original
 
 # def ensure_libretranslate():
 #     """Verifica e inicia LibreTranslate si no está corriendo."""
@@ -74,4 +70,4 @@ def is_service_running():
 
 # if __name__ == "__main__":
 #     ensure_libretranslate()
-    # print(REPO_DIR)
+# print(REPO_DIR)

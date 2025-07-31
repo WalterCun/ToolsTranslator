@@ -10,7 +10,7 @@ import os
 import logging
 from time import sleep
 
-from docker_tool import manage_libretranslate
+from translator.tools.docker_tool import manage_libretranslate
 from translator.tools.docker_tool import is_docker_installed, is_docker_running
 
 # Configuración de logs

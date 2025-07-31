@@ -3,11 +3,11 @@
 
 """ translator/__init__.py """
 
-from .core.translate import Translator
-from .config import settings
-from .api.translate_api import LibreTranslate
+from translator.core.translate import Translator
+from translator.config import settings
+from translator.api.translate_api import LibreTranslate
 
-from .__version import __version__
+from translator.__version import __version__
 
 __author__ = "Walter Cun Bustamante"
 __email__ = "waltercunbustamante@gmail.com"

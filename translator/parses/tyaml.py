@@ -5,7 +5,10 @@
 
 from typing import Union, List, Dict
 
-import yaml
+try:
+    import yaml
+except ImportError:
+    yaml = None
 
 
 class YAML:
@@ -32,7 +35,7 @@ class YAML:
         :return: Lista de tuplas serializada.
         """
         # Simula lógica de serialización usando un serializer externo.
-        from parses.json import JSON
+        from translator.parses.tjson import JSON
         return JSON.serializer_json(data, path)
 
     @staticmethod
@@ -43,7 +46,7 @@ class YAML:
         :param entries: Lista de tuplas serializada.
         :return: Diccionario deserializado.
         """
-        from parses.json import JSON
+        from translator.parses.tjson import JSON
         return JSON.deserializar_json(entries)
 
     def get_content_yaml_file(self, file_path: str = None) -> dict:
