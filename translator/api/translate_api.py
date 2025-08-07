@@ -14,7 +14,7 @@ from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 from translator.config import settings
-from verify_docker_tool import ensure_docker
+from translator.tools.verify_docker_tool import ensure_docker
 
 log = logging.getLogger(__name__)
 

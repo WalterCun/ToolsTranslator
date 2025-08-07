@@ -83,3 +83,7 @@ def handle_auto_translate(args):
 
     translator = AutoTranslate(info_file, args=args)
     translator.worker()
+
+
+if __name__ == "__main__":
+    main()

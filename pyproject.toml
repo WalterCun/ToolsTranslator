@@ -20,7 +20,6 @@ classifiers = [
     #    "Programming Language :: Python :: 3.11",
 
     # Licencia
-    "License :: OSI Approved :: MIT License",
     # Sistema operativo compatible
     "Operating System :: OS Independent",
     # Estado de desarrollo
@@ -82,3 +81,6 @@ yml = [
 [project.urls]
 Homepage = "https://github.com/WalterCun/ToolsTranslator.git"
 Repository = "https://github.com/WalterCun/ToolsTranslator.git"
+
+[project.scripts]
+translator = "translator.main:main"
