@@ -7,7 +7,7 @@ from translator.core.translate import Translator
 from translator.config import settings
 from translator.api.translate_api import LibreTranslate
 
-from translator.__version import __version__
+from translator.__version__ import __version__
 
 __author__ = "Walter Cun Bustamante"
 __email__ = "waltercunbustamante@gmail.com"

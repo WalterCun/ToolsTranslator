@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 
 def get_version():
     """Obtiene la versión del proyecto"""
-    from translator.__version import __version__ as version
+    from translator.__version__ import __version__ as version
     return version
 
 
