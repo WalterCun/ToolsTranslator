@@ -41,6 +41,7 @@ log = logging.getLogger(__name__)
 
 # Constants
 LIBRETRANSLATE_REPO_URL = "https://github.com/LibreTranslate/LibreTranslate.git"
+LIBRETRANSLATE_BRANCH = "v1.6.5"
 DEFAULT_PORT = 5000
 DEFAULT_TIMEOUT = 60
 DOCKER_COMPOSE_FILE = "docker-compose.cuda.yml"
@@ -472,13 +473,14 @@ class ServiceChecker:
             timeout: Maximum time to wait in seconds
 
         Returns:
-            bool: True if service is accessible, False otherwise
+            bool: True if the service is accessible, False otherwise
         """
         log.info(f"Checking if LibreTranslate service is running at {self.url}")
 
         wait_time = 1
         max_wait_time = timeout
 
+        time.sleep(max_wait_time)
         while True:
             try:
                 response = requests.get(self.url, timeout=5)
@@ -533,7 +535,7 @@ class LibreTranslateInstaller:
         )
 
     def _try_existing_image(self) -> OperationResult:
-        """Try to use existing local image"""
+        """Try to use an existing local image"""
         log.info("Trying to use existing local image")
 
         existing_images = self.manager.find_existing_images()
@@ -561,11 +563,11 @@ class LibreTranslateInstaller:
         return OperationResult(success=False, message="Could not use existing image")
 
     def _try_docker_hub_image(self) -> OperationResult:
-        """Try to pull and run official image from Docker Hub"""
+        """Try to pull and run the official image from Docker Hub"""
         log.info("Trying to pull official image from Docker Hub")
 
-        official_image = "libretranslate/libretranslate:latest"
-        container_name = "libretranslate-official"
+        official_image = "libretranslate/libretranslate:v1.6.5-cuda"
+        container_name = "libretranslate"
 
         try:
             # Pull image
@@ -603,7 +605,7 @@ class LibreTranslateInstaller:
 
     def _try_build_from_repo(self) -> OperationResult:
         """
-        Try to build LibreTranslate from GitHub repository with CUDA support.
+        Try to build LibreTranslate from the GitHub repository with CUDA support.
 
         Returns:
             OperationResult: Build and deployment result
@@ -612,7 +614,7 @@ class LibreTranslateInstaller:
 
         temp_dir = None
         try:
-            # Create temporary directory
+            # Create a temporary directory
             temp_dir = Path(tempfile.mkdtemp(prefix="libretranslate_build_"))
             log.info(f"Created temporary directory: {temp_dir}")
 
@@ -661,7 +663,7 @@ class LibreTranslateInstaller:
 
     def _clone_repository(self, temp_dir: Path) -> OperationResult:
         """
-        Clone LibreTranslate repository to temporary directory.
+        Clone LibreTranslate repository to a temporary directory.
 
         Args:
             temp_dir: Directory where to clone the repository
@@ -681,9 +683,9 @@ class LibreTranslateInstaller:
             )
 
             # Clone the repository
-            log.info(f"Executing: git clone {LIBRETRANSLATE_REPO_URL} {temp_dir}")
+            log.info(f"Executing: git clone --branch {LIBRETRANSLATE_BRANCH} {LIBRETRANSLATE_REPO_URL} {temp_dir}")
             subprocess.run([
-                "git", "clone", LIBRETRANSLATE_REPO_URL, str(temp_dir)
+                "git", "clone", '--branch', LIBRETRANSLATE_BRANCH, LIBRETRANSLATE_REPO_URL, str(temp_dir)
             ], check=True, capture_output=True, text=True, timeout=120)
 
             return OperationResult(
@@ -764,7 +766,7 @@ class LibreTranslateInstaller:
 
             log.info(f"Executing build command: {' '.join(build_command)}")
 
-            # Execute build with streaming output
+            # Execute a build with streaming output
             build_output = []
             build_success = True
 
@@ -931,7 +933,7 @@ class LibreTranslateInstaller:
             )
 
     def _deploy_built_container(self, image_name: str,
-                                container_name: str = "libretranslate-custom") -> OperationResult:
+                                container_name: str = "libretranslate") -> OperationResult:
         """
         Deploy container from built image.
 
@@ -1009,7 +1011,7 @@ class LibreTranslateInstaller:
             ])
 
             if container_name in existing_check.stdout:
-                # Start existing container
+                # Start an existing container
                 self.docker.execute_docker_command([
                     "docker", "start", container_name
                 ])
@@ -1020,7 +1022,7 @@ class LibreTranslateInstaller:
                     data={'container_name': container_name, 'restarted': True}
                 )
             else:
-                # Create new container
+                # Create a new container
                 self.docker.execute_docker_command([
                     "docker", "run", "-d",
                     "--name", container_name,
