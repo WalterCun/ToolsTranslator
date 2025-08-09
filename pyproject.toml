@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=65.5.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -11,26 +11,26 @@ authors = [{ name = "Walter Cun Bustamante", email = "waltercunbustamante@gmail.
 license = {text = "MIT"}
 requires-python = ">=3.10"
 classifiers = [
-    "Programming Language :: Python :: 3.10",
-    "Operating System :: OS Independent",
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries",
     "Topic :: Software Development :: Internationalization",
     "Topic :: Utilities",
     "Topic :: Text Processing :: Linguistic",
-    "Environment :: Console",
-    "Natural Language :: English",
-    "Natural Language :: Spanish",
+    "Topic :: Text Processing :: Linguistic",
 ]
 dependencies = [
-    "colorlog>=0.4",
+    "colorlog>=6.7.0",
     "requests>=2.32.3",
     "requests-cache>=1.2.1",
     "pydantic-settings>=2.8.0",
 ]
-
 keywords = ["translate", "i18n", "automation"]
 
 [project.optional-dependencies]
@@ -41,7 +41,6 @@ dev = [
     "build>=1.2.2.post1",
     "twine",
 ]
-
 yml = [
     "pyyaml>=6.0.2",
 ]
@@ -49,9 +48,7 @@ yml = [
 [project.urls]
 Homepage = "https://github.com/WalterCun/ToolsTranslator"
 Repository = "https://github.com/WalterCun/ToolsTranslator"
-
-[tool.setuptools]
-py-modules = []
+"Bug Reports" = "https://github.com/WalterCun/ToolsTranslator/issues"
 
 [tool.setuptools.dynamic]
 version = {attr = "translator.__version__"}
@@ -59,4 +56,7 @@ version = {attr = "translator.__version__"}
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["translator*"]
-exclude = ["tests*", "docs*", "struct_files*", "examples*"]
+exclude = ["tests*", "docs*", "examples*", "struct_files*"]
+
+[tool.setuptools.package-data]
+translator = ["**/*.py"]

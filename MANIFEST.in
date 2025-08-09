@@ -1,0 +1,8 @@
+include README.md
+include LICENSE
+include pyproject.toml
+recursive-include translator *.py
+recursive-exclude translator/__pycache__ *
+recursive-exclude translator */__pycache__ *
+recursive-exclude * *.pyc
+recursive-exclude * *.pyo
