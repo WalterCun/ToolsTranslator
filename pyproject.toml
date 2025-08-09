@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "translation-tools"
-version = "0.1.9"
+version = "0.1.10"
 description = "Una librería de soporte para traducir archivos i18n."
 readme = "README.md"
 authors = [{ name = "Walter Cun Bustamante", email = "waltercunbustamante@gmail.com" }]

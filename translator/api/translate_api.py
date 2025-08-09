@@ -47,14 +47,14 @@ class LibreTranslate:
     :type retry_delay: int
     """
 
-    def __init__(self, url: str = "http://localhost:5000/", max_retries=3, retry_delay=3):
+    def __init__(self, url: str = "http://localhost:5000/", max_retries=3, retry_delay=3, connection_validate:bool=False):
         self.url_translate = urljoin(url, 'translate')
         self.url_languages = urljoin(url, 'languages')
         self.url_detect = urljoin(url, 'detect')
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         self.session = self._configure_session()
-        validator_docker_container()
+        if connection_validate: validator_docker_container()
 
     def _configure_session(self):
         # Configuramos una sesión para reutilizar conexiones y mejorar el rendimiento

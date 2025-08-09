@@ -27,8 +27,8 @@ class Translator:
             _current_lang (str): Currently selected language code.
     """
 
-    def __init__(self, translations_dir: Path = settings.BASE_DIR / 'langs', default_lang="en"):
-        self.api = LibreTranslate()
+    def __init__(self, translations_dir: Path = settings.BASE_DIR / 'langs', default_lang="en", validate_or_correct_connection:bool= False):
+        self.api = LibreTranslate(connection_validate=validate_or_correct_connection)
 
         self.translations_dir = Path(translations_dir)
         self.translations_dir.mkdir(parents=True, exist_ok=True)
