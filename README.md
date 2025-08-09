@@ -1,112 +1,148 @@
-# Translate Tools
+# translation-tools
 
-[![CI](https://github.com/zapier/zapier-platform/actions/workflows/ci.yaml/badge.svg)](https://github.com/usuario/repositorio/actions/workflows/ci.yaml)
-[![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](https://codecov.io/)
-[![Python Version](https://img.shields.io/badge/python-3.10-blue)](https://www.python.org/)
-[![Sponsors](https://img.shields.io/badge/sponsor-%E2%9D%A4-brightgreen)](#sponsors)
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 
-[![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](https://codecov.io/)
-[![Python Version](https://img.shields.io/badge/python-3.10-blue)](https://www.python.org/)
-[![Sponsors](https://img.shields.io/badge/sponsor-%E2%9D%A4-brightgreen)](#sponsors)
+Librería y CLI para traducir archivos i18n y gestionar traducciones locales utilizando un servicio LibreTranslate.
 
-Este es el repositorio principal para el desarrollo de **[Nombre del Proyecto]**, una herramienta diseñada para [breve descripción del propósito del proyecto, por ejemplo, "realizar traducciones de texto de manera eficiente y extensible"].
+- Requiere Python 3.10+
+- Recomendado tener LibreTranslate disponible en http://localhost:5000 (ver docs/HOWTO_DOCKER.md)
 
----
+## Características
 
-## Sponsors
+- Librería y CLI para gestionar traducciones por idioma en archivos JSON.
+- Integración con LibreTranslate (http://localhost:5000 por defecto) con cache y reintentos.
+- Detección automática de idioma base al traducir archivos.
+- Soporte de formatos para AutoTranslate: JSON; YAML/YML en desarrollo (instalar el extra `yml` para parseo).
+- Utilidades para i18n.ts (TypeScript) de forma experimental (ver translator/parses/tts.py).
+- Herramientas para validar/levantar el servicio con Docker cuando es posible.
 
-[![Become a Sponsor](https://img.shields.io/badge/sponsor-%F0%9F%92%96-pink?label=Become%20a%20Sponsor&style=for-the-badge)](https://opencollective.com/ToolsTranslator)  
-Si te gusta nuestro proyecto y te gustaría apoyarlo, considera convertirte en patrocinador. Tu contribución nos ayuda a mantener el desarrollo activo. Gracias.
+## Requisitos
 
-¡Gracias a nuestros patrocinadores actuales!
+- Python 3.10 o superior.
+- Servicio LibreTranslate accesible en http://localhost:5000.
+  - Si no tienes uno, revisa docs/HOWTO_DOCKER.md para iniciarlo automáticamente vía Docker.
 
-### Patrocinadores principales:
-[![Principal Sponsor](https://img.shields.io/badge/Your%20Logo-Here-important?style=for-the-badge)](https://tusitio.com)
+## Instalación
 
----
+```powershell
+pip install translation-tools
+# Soporte YAML (opcional)
+pip install "translation-tools[yml]"
+```
 
-## Contenido del Repositorio
+## Formatos soportados
 
-El proyecto está estructurado en varias carpetas y archivos principales:
+- JSON: Soportado plenamente para librería y AutoTranslate.
+- YAML/YML: Requiere instalar el extra `yml` (pyyaml).
+- TypeScript (i18n.ts): utilidades de parseo disponibles, AutoTranslate aún no soporta TS directamente.
 
-- **`core/`:** Contiene el código fuente principal, incluido el archivo `translate.py`, que implementa la lógica para
-  las traducciones.
-- **`tests/`:** Alberga las pruebas unitarias y de integración para garantizar la calidad del código.
-- **`docs/`:** Almacena archivos de documentación adicionales, como guías avanzadas y explicaciones técnicas.
-- **`examples/`:** Contiene ejemplos de uso del proyecto para facilitar la adopción por parte de los usuarios.
+## Uso rápido (librería)
 
----
+```python
+from pathlib import Path
+from translator import Translator
+
+langs_dir = Path("./langs")
+tr = Translator(translations_dir=langs_dir, default_lang="en")
+
+# Agrega una traducción al archivo de español
+tr.add_trans(key="greeting", lang="es", value="Hola mundo")
+
+# Cambia el idioma activo y lee la clave como atributo
+tr.lang = "es"
+print(tr.greeting)  # Si no existe, se guardará "No implement Translation" y se devolverá ese texto
+```
+
+### Uso avanzado (librería)
+
+```python
+from pathlib import Path
+from translator import Translator
+
+# Inicializar el traductor
+tr = Translator(translations_dir=Path("./langs"), default_lang="en")
+
+# Cambiar dinámicamente el idioma
+tr.lang = "fr"
+print(tr.greeting)
+
+# Idiomas soportados por el servicio
+print(tr.api.get_supported_languages("en", to_list=True))
+```
+
+## AutoTranslate (librería)
+
+Traduce un archivo base (JSON/YAML) a otros idiomas.
+
+```python
+from pathlib import Path
+from translator.core.autotranslate import AutoTranslate
+from translator.utils import TranslateFile
+
+src = Path("./struct_files/en.json")
+info = TranslateFile(src)
+auto = AutoTranslate(info)
+# Traduce a los idiomas soportados (o configura idiomas en el CLI)
+auto.worker()
+```
+
+## Uso rápido (CLI)
+
+- Versión
+```powershell
+python -m translator --version
+```
+
+- Agregar una traducción
+```powershell
+# Crear o actualizar ./langs/es.json con una nueva clave
+python -m translator add .\langs\es.json --key greeting --lang es "Hola mundo"
+```
+
+- Traducción automática de archivos
+```powershell
+# Traducir un archivo base a varios idiomas
+python -m translator auto-translate .\struct_files\en.json --langs es fr
+
+# Directorio de salida y sobreescritura
+python -m translator auto-translate .\struct_files\en.json --langs es fr --output .\struct_files\output --overwrite
+```
+
+Parámetros principales de auto-translate:
+- --base: Idioma base si no se detecta desde el nombre del archivo.
+- --langs: Idiomas destino (ej. es en fr). Acepta múltiples valores o "all".
+- --output: Directorio donde escribir las salidas JSON.
+- --force: Forzar traducciones aunque ya existan.
+- --overwrite: Incluir el idioma base cuando se usa "all" y sobreescribir salidas.
+
+## Servicio LibreTranslate y Docker
+
+- Por defecto se usa http://localhost:5000. La herramienta intentará validar e iniciar un contenedor "libretranslate" usando Docker cuando sea posible.
+- En entornos no interactivos (CI) o sin Docker, asegúrate de tener el servicio corriendo previamente.
+- Más detalles en [docs/HOWTO_DOCKER.md](docs/HOWTO_DOCKER.md).
 
 ## Documentación
 
-Este proyecto incluye documentación para ayudarte a comenzar y comprender la estructura técnica. Los enlaces importantes
-son los siguientes:
+- Guía de uso: [docs/USAGE.md](docs/USAGE.md)
+- Referencia de API: [docs/API_REFERENCE.md](docs/API_REFERENCE.md)
+- LibreTranslate + Docker: [docs/HOWTO_DOCKER.md](docs/HOWTO_DOCKER.md)
+- Desarrollo/Instalación: [docs/INSTALL_DEV.md](docs/INSTALL_DEV.md)
+- Arquitectura: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
-### Documentación Pública
+## Ejemplos ejecutables
 
-- [Guía para Configurar el Entorno de Desarrollo (`INSTALL_DEV.md`)](docs/INSTALL_DEV.md)
-- [Guía de Arquitectura (`ARCHITECTURE.md`)](docs/ARCHITECTURE.md)
-- [Guía para Contribuir (`CONTRIBUTING.md`)](docs/CONTRIBUTING.md)
+- examples/simple_translator.py
+- examples/auto_translate_file.py
+- examples/check_service.py
 
-### Referencia de Código
+## Contribuir
 
-- [Ejemplos de Implementación](examples/)
-- [Registro de Cambios (`CHANGELOG.md`)](CHANGELOG.md)
+Las contribuciones son bienvenidas. Revisa [CONTRIBUTING.md](CONTRIBUTING.md) para más detalles.
 
----
+## Soporte y issues
 
-## Uso
-
-### Requisitos Previos
-
-Antes de usar este proyecto, asegúrate de cumplir con los siguientes requisitos:
-
-- Python 3.10 o superior
-- Dependencias especificadas en `requirements.txt`
-
-### Instalación
-
-Sigue los pasos descritos en [INSTALL_DEV.md](docs/INSTALL_DEV.md) para configurar tu entorno de desarrollo.
-
-### Ejemplo de Uso
-
-Aquí tienes un ejemplo básico de cómo utilizar el proyecto:
-
-```python
-from core.translate import translate
-
-# Traducción de texto de ejemplo
-resultado = translate("Hello, world!", target_language="es")
-print(resultado)  # Salida esperada: "¡Hola, mundo!"
-```
-
-Para más ejemplos detallados, visita la carpeta de [Ejemplos (`examples/`)](examples/).
-
----
-
-## Contribuciones
-
-¡Contribuciones son bienvenidas! Por favor, revisa nuestra [Guía de Contribución (
-`CONTRIBUTING.md`)](docs/CONTRIBUTING.md) para entender cómo puedes ayudarnos a mejorar este proyecto.
-
-### Reportar Problemas
-
-Si encuentras un problema o tienes alguna sugerencia, no dudes en crear un
-nuevo [Issue](https://github.com/usuario/repositorio/issues).
-
----
-
-## Estructura Técnica
-
-Si deseas aprender más sobre cómo está diseñado y estructurado este proyecto, por favor
-consulta [ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
----
+Reporta problemas o solicita mejoras en: https://github.com/WalterCun/ToolsTranslator/issues
 
 ## Licencia
 
-Este proyecto está licenciado bajo [Licencia MIT](LICENSE). Por favor, consulta el archivo LICENSE para más detalles.
-
----
-
-¡Gracias por usar o contribuir al proyecto! 🎉
+Este proyecto está disponible bajo la [Licencia MIT](LICENSE).
