@@ -4,17 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "translation-tools"
-dynamic = ["version"]
+version = "0.1.9"
 description = "Una librería de soporte para traducir archivos i18n."
 readme = "README.md"
 authors = [{ name = "Walter Cun Bustamante", email = "waltercunbustamante@gmail.com" }]
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+    "Operating System :: OS Independent", 
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -23,11 +22,10 @@ classifiers = [
     "Topic :: Software Development :: Internationalization",
     "Topic :: Utilities",
     "Topic :: Text Processing :: Linguistic",
-    "Topic :: Text Processing :: Linguistic",
 ]
 dependencies = [
     "colorlog>=6.7.0",
-    "requests>=2.32.3",
+    "requests>=2.32.3", 
     "requests-cache>=1.2.1",
     "pydantic-settings>=2.8.0",
 ]
@@ -37,7 +35,7 @@ keywords = ["translate", "i18n", "automation"]
 dev = [
     "pytest",
     "black",
-    "flake8",
+    "flake8", 
     "build>=1.2.2.post1",
     "twine",
 ]
@@ -50,13 +48,7 @@ Homepage = "https://github.com/WalterCun/ToolsTranslator"
 Repository = "https://github.com/WalterCun/ToolsTranslator"
 "Bug Reports" = "https://github.com/WalterCun/ToolsTranslator/issues"
 
-[tool.setuptools.dynamic]
-version = {attr = "translator.__version__"}
-
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["translator*"]
-exclude = ["tests*", "docs*", "examples*", "struct_files*"]
-
-[tool.setuptools.package-data]
-translator = ["**/*.py"]
+exclude = ["tests*", "docs*", "examples*"]
