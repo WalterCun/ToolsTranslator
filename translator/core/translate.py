@@ -5,13 +5,120 @@
 import json
 import logging
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Union
 
 from translator.config import settings
 from translator.api.translate_api import LibreTranslate
 
 
-# config_logging(log, logging.INFO)
+class AuxiliarTranslationProxy:
+    """
+    Proxy class to handle nested translation access using dot notation.
+    Allows accessing nested dictionary keys as attributes.
+    """
+    NESTED_KEY_SEPARATOR = "."
+    DEFAULT_MISSING_KEY_MESSAGE = "Key no Implemented"
+
+    def __init__(self, translator: 'Translator', parent_key: str = ""):
+        self.translator = translator
+        self.parent_key = parent_key
+        self._is_terminal = False  # Flag para saber si este proxy representa un valor terminal
+
+    def __getattr__(self, key: str):
+        """
+        Handle nested attribute access for translations.
+
+        :param key: The key to access
+        :return: NestedTranslationProxy for further nesting or translated string
+        """
+        full_key = f"{self.parent_key}{self.NESTED_KEY_SEPARATOR}{key}" if self.parent_key else key
+
+        # Crear un nuevo proxy para la clave completa
+        new_proxy = AuxiliarTranslationProxy(self.translator, full_key)
+
+        # Verificar si existe como estructura anidada o valor final
+        nested_value = self._get_nested_value(self.translator.dict_trans, full_key)
+
+        if isinstance(nested_value, dict):
+            # Es una estructura anidada, devolver proxy para continuar
+            return new_proxy
+        elif nested_value is not None:
+            # Es un valor final, marcar el proxy como terminal
+            new_proxy._is_terminal = True
+            new_proxy._terminal_value = str(nested_value)
+            return new_proxy
+        else:
+            # No existe, verificar si podría existir estructura anidada
+            if self._could_have_nested_structure(self.translator.dict_trans, full_key):
+                # Podría tener estructura anidada, continuar con proxy
+                return new_proxy
+            else:
+                # No hay estructura posible, marcar como terminal con mensaje por defecto
+                new_proxy._is_terminal = True
+                new_proxy._terminal_value = self.translator._translate(full_key)
+                return new_proxy
+
+    def _get_nested_value(self, data: dict, key_path: str):
+        """
+        Get value from a nested dictionary using a dot-separated key path.
+
+        :param data: Dictionary to search in
+        :param key_path: Dot-separated key path
+        :return: Value if found, None otherwise
+        """
+        keys = key_path.split(self.NESTED_KEY_SEPARATOR)
+        current_value = data
+
+        for key in keys:
+            if isinstance(current_value, dict) and key in current_value:
+                current_value = current_value[key]
+            else:
+                return None
+
+        return current_value
+
+    def _could_have_nested_structure(self, data: dict, key_path: str) -> bool:
+        """
+        Check if there could be potential nested keys based on existing structure.
+
+        :param data: Dictionary to search in
+        :param key_path: Key path to check
+        :return: True if there could be potential nested matches
+        """
+        # Obtener la primera parte del key path
+        keys = key_path.split(self.NESTED_KEY_SEPARATOR)
+
+        # Verificar si existe la primera clave como diccionario
+        current_value = data
+        for key in keys:
+            if isinstance(current_value, dict) and key in current_value:
+                current_value = current_value[key]
+                if isinstance(current_value, dict):
+                    return True
+            else:
+                break
+
+        # Verificar si hay claves planas que empiecen con este path
+        return any(k.startswith(key_path + self.NESTED_KEY_SEPARATOR) for k in data.keys() if isinstance(k, str))
+
+    def __str__(self) -> str:
+        """
+        Convert proxy to string by returning the terminal value or translating.
+        """
+        if hasattr(self, '_is_terminal') and self._is_terminal:
+            return getattr(self, '_terminal_value', self.DEFAULT_MISSING_KEY_MESSAGE)
+
+        if self.parent_key:
+            return self.translator._translate(self.parent_key)
+
+        return self.DEFAULT_MISSING_KEY_MESSAGE
+
+    def __repr__(self) -> str:
+        """
+        Return a string representation of the proxy.
+        """
+        return self.__str__()
+
 
 class Translator:
     """
@@ -27,7 +134,10 @@ class Translator:
             _current_lang (str): Currently selected language code.
     """
 
-    def __init__(self, translations_dir: Path = settings.BASE_DIR / 'langs', default_lang="en", validate_or_correct_connection:bool= False):
+    DEFAULT_MISSING_KEY_MESSAGE = "Key no Implemented"
+
+    def __init__(self, translations_dir: Path = settings.BASE_DIR / 'langs', default_lang="en",
+                 validate_or_correct_connection: bool = False):
         self.api = LibreTranslate(connection_validate=validate_or_correct_connection)
 
         self.translations_dir = Path(translations_dir)
@@ -80,13 +190,6 @@ class Translator:
         self.dict_trans = self._load_translations(value)
         self._current_lang = value
 
-    # def __get_languages_supported(self):
-    #     """Get supported languages from the API"""
-    #     languages = self.api.get_supported_languages(self.lang)
-    #     if languages:
-    #         languages.append('auto')
-    #     return languages
-
     def _validate_lang(self, lang) -> bool:
         """
         Validates whether the provided language is supported or set to 'auto'.
@@ -132,99 +235,179 @@ class Translator:
         else:
             return {}
 
-    # def _load_struct_translate(self, base_file: str = None) -> None:
-    #     """
-    #     Loads translation structure based on the file type and extracts the relevant content. Supports specific
-    #     extensions like `json`, and processes content accordingly. Other extensions or unsupported formats
-    #     will raise a ValueError.
-    #
-    #     :param base_file: Path to the base file for processing. Defaults to None, meaning that path will
-    #                       be retrieved from the meta data if not explicitly provided.
-    #     :type base_file: Optional[str]
-    #     :return: None
-    #     """
-    #     if self.meta.get('ext') == 'json':
-    #         json_data = JSON.get_content_json_file(base_file or self.meta.get('path'))
-    #         extracted_texts = JSON.serializer_json(json_data)
-    #         for path, text in extracted_texts:
-    #             print(f"Ruta: {path} -> {text}")
-    #     elif self.meta.get('ext') == 'yaml':
-    #         pass
-    #     elif self.meta.get('ts') == 'ts' or self.meta.get('name') == 'i18n.ts':
-    #         pass
-    #     else:
-    #         raise ValueError(f"Formato no soportado {self.meta.get('ext')}")
-
-    def _save_translations(self, lang, translations) -> None:
+    def _save_translations(self, lang, translations, force=False) -> None:
         """
         Guarda las traducciones en un archivo JSON específico.
 
         :param lang: Código del idioma.
         :param translations: Diccionario de traducciones a guardar.
+        :param force: Parámetro opcional para compatibilidad
         """
 
         file_path = self._get_translation_file(lang)
         with file_path.open("w", encoding="utf-8") as file:
             json.dump(translations, file, ensure_ascii=False, indent=4)
 
-    def add_trans(self, key: str, lang: str, value: str, force: bool = False) -> None:
+    def _set_nested_value(self, data: dict, key_path: str, value: str) -> dict:
+        """
+        Establece un valor en un diccionario anidado usando una ruta de claves separadas por puntos.
+
+        :param data: Diccionario donde establecer el valor
+        :param key_path: Ruta de claves separadas por puntos
+        :param value: Valor a establecer
+        :return: Diccionario modificado
+        """
+        keys = key_path.split(AuxiliarTranslationProxy.NESTED_KEY_SEPARATOR)
+        current_dict = data
+
+        # Navegar hasta la penúltima clave, creando diccionarios si es necesario
+        for key in keys[:-1]:
+            if key not in current_dict:
+                current_dict[key] = {}
+            elif not isinstance(current_dict[key], dict):
+                # Si existe pero no es un diccionario, lo convertimos a diccionario
+                current_dict[key] = {}
+            current_dict = current_dict[key]
+
+        # Establecer el valor en la última clave
+        final_key = keys[-1]
+        current_dict[final_key] = value
+
+        return data
+
+    def add_trans(self, key: str, lang: str, value: str, force: bool = False, nested: bool = True) -> None:
         """
         Agrega una traducción para una clave en un idioma específico.
+        Soporta claves anidadas cuando nested=True.
 
-        :param force:
-        :param key: La clave identificadora de la traducción.
+        :param key: La clave identificadora de la traducción (puede usar puntos para anidamiento).
         :param lang: El idioma de la traducción (e.g., 'en', 'es', 'fr').
         :param value: El texto traducido.
+        :param force: Si fuerza la sobrescritura de traducciones existentes.
+        :param nested: Si usa estructura anidada para claves con puntos (True) o clave plana (False).
         """
-
         self.log.info(f'Obtener archivo lang({lang})')
         translations = self._load_translations(lang)
-        self.log.info(f'Obteniendo traduccion({key})')
-        translations[key] = value
-        self.log.info(f'Guardando traduccion >> {key}: {translations}')
+
+        if nested and AuxiliarTranslationProxy.NESTED_KEY_SEPARATOR in key:
+            # Usar estructura anidada
+            self.log.info(f'Agregando traducción anidada para clave: {key}')
+            translations = self._set_nested_value(translations, key, value)
+        else:
+            # Usar clave plana (comportamiento original)
+            self.log.info(f'Obteniendo traduccion({key})')
+
+            # Si force=False y ya existe, no sobrescribir
+            if not force and key in translations:
+                self.log.info(f'Traducción ya existe para {key}: {translations[key]}')
+                return
+
+            translations[key] = value
+
+        self.log.info(f'Guardando traduccion >> {key}: {value}')
         self._save_translations(lang, translations)
 
-    def _translate(self, key) -> str:
-        """
-        Traduce una clave al idioma actual. Si no encuentra una traducción,
-        intenta usar el idioma predeterminado. Si tampoco existe, devuelve un mensaje por defecto.
+        # Actualizar el diccionario en memoria si es el idioma actual
+        if lang == self._current_lang:
+            if nested and AuxiliarTranslationProxy.NESTED_KEY_SEPARATOR in key:
+                self.dict_trans = self._set_nested_value(self.dict_trans, key, value)
+            else:
+                self.dict_trans[key] = value
 
-        :param key: La clave a traducir.
+    def add_nested_trans(self, key_path: str, lang: str, value: str, force: bool = False) -> None:
+        """
+        Métod de conveniencia para agregar traducciones anidadas.
+
+        :param key_path: Ruta de claves separadas por puntos (ej: "user.messages.welcome")
+        :param lang: Código del idioma
+        :param value: Valor de la traducción
+        :param force: Si fuerza la sobrescritura
+        """
+        self.add_trans(key_path, lang, value, force, nested=True)
+
+    def add_flat_trans(self, key: str, lang: str, value: str, force: bool = False) -> None:
+        """
+        Métod de conveniencia para agregar traducciones con clave plana.
+
+        :param key: Clave de traducción (se guardará tal como está, incluso con puntos)
+        :param lang: Código del idioma
+        :param value: Valor de la traducción
+        :param force: Si fuerza la sobrescritura
+        """
+        self.add_trans(key, lang, value, force, nested=False)
+
+    def _get_nested_value(self, data: dict, key_path: str):
+        """
+        Obtiene un valor de un diccionario anidado usando una ruta de claves separadas por puntos.
+
+        :param data: Diccionario en el que buscar
+        :param key_path: Ruta de claves separadas por puntos
+        :return: Valor si se encuentra, None en caso contrario
+        """
+        keys = key_path.split(AuxiliarTranslationProxy.NESTED_KEY_SEPARATOR)
+        current_value = data
+
+        for key in keys:
+            if isinstance(current_value, dict) and key in current_value:
+                current_value = current_value[key]
+            else:
+                return None
+
+        return current_value
+
+    def _translate(self, key: str, auto_add_missing: bool = False) -> str:
+        """
+        Traduce una clave al idioma actual SOLAMENTE.
+        No busca en idiomas fallback para mostrar correctamente cuando una clave no está implementable.
+
+        :param key: La clave a traducir (puede incluir puntos para anidamiento).
+        :param auto_add_missing: Si agregar automáticamente claves faltantes con mensaje por defecto.
         :return: La traducción correspondiente o un mensaje predeterminado.
         """
-        # Intentar traducir en el idioma actual
-        translation = self.dict_trans.get(key, None)
-        if translation:
-            return translation
+        # SOLO buscar en el idioma actual - no usar fallback
 
-        # Si no se encuentra, intentar traducir en el idioma predeterminado
+        # Intentar buscar la traducción usando el acceso anidado en el idioma actual
+        translation = self._get_nested_value(self.dict_trans, key)
+        if translation and not isinstance(translation, dict):
+            return str(translation)
 
-        translation = self._load_translations(self.lang)
-        translation = translation.get(key)
-        if translation:
-            return translation
+        # Intentar buscar la clave tal como está (compatibilidad con claves con puntos)
+        direct_translation = self.dict_trans.get(key, None)
+        if direct_translation and not isinstance(direct_translation, dict):
+            return str(direct_translation)
 
-        # Si no hay traducción, devolver un mensaje predeterminado
-        self.add_trans(key, self.lang, "No implement Translation")
-        return "No implement Translation"
+        # Si no hay traducción en el idioma actual, agregar mensaje por defecto
+        if auto_add_missing:
+            self.add_trans(key, self.lang, self.DEFAULT_MISSING_KEY_MESSAGE)
 
-    def __getattr__(self, key) -> str:
+        return self.DEFAULT_MISSING_KEY_MESSAGE
+
+    def get_translation(self, key: str, auto_create: bool = False) -> str:
         """
-        Permite acceder a las claves de traducción como si fueran atributos de la clase.
+        Métod público para obtener traducciones con control explícito sobre la creación de claves.
+
+        :param key: La clave a traducir
+        :param auto_create: Si crear automáticamente la clave si no existe
+        :return: La traducción o mensaje por defecto
+        """
+        return self._translate(key, auto_add_missing=auto_create)
+
+    def __getattr__(self, key: str):
+        """
+        Permite acceder a las claves de traducción como atributos, soportando acceso anidado.
 
         :param key: La clave a traducir.
-        :return: La traducción correspondiente o un mensaje predeterminado.
+        :return: AuxiliarTranslationProxy para acceso anidado o string para valores finales.
         """
         self.log.info(f'Obteniendo atributo >> {key}')
-        return self._translate(key)
+
+        # Siempre devolver un proxy que maneje la lógica
+        return AuxiliarTranslationProxy(self, key)
 
 
 if __name__ == '__main__':
-    translate = Translator()
-    print(translate.lang)
-    print(translate.greetings)
-    translate.lang = "es"
-    print(translate.lang)
-    print(translate.greetings)
+    trans = Translator()
+    trans.lang = "es"
 
-    # translate.auto_translate("es", ["en"])
+    # Test con clave que existe en en.json pero no en es.json
+    print(f"trans.user.messages.welcome = {trans.user.messages.welcome}")

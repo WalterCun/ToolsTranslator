@@ -14,7 +14,6 @@ from translator.utils import TranslateFile
 
 from translator import AutoTranslate, Translator
 
-
 logging.basicConfig(
     level=logging.WARN,  # Establece el nivel mínimo de log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     format="[%(asctime)s] - [%(name)s] - [%(levelname)s] -> %(message)s",  # Formato del log
@@ -24,6 +23,7 @@ logging.basicConfig(
 )
 
 log = logging.getLogger(__name__)
+
 
 def get_version():
     """Obtiene la versión del proyecto"""
@@ -44,10 +44,10 @@ def main():
 
         # Subcomando para agregar texto
         add_parser = subparsers.add_parser("add", help="Agregar una nueva traducción")
-        add_parser.add_argument("file", type=Path, help="Archivo JSON donde se almacenará la traducción")
         add_parser.add_argument("value", help="El texto traducido")
         add_parser.add_argument("--key", required=True, help="La clave de la traducción")
         add_parser.add_argument("--lang", help="El idioma (e.g., es, en, fr)", default="es")
+        add_parser.add_argument("--output", help="Directorio de salida para los archivos de traduccion")
 
         # Subcomando para traducción automática
         auto_translate_parser = subparsers.add_parser("auto-translate", help="Auto translate")
@@ -71,19 +71,25 @@ def main():
         else:
             parser.print_help()
 
+
 def handle_add_text(args):
     """ Maneja el comando 'add' para agregar traducciones. """
-    file_path = args.file
+    dir_output = args.output
+    translator = Translator()
 
-    if not file_path.parent.exists():
-        log.error(f"El directorio '{file_path.parent}' no existe.")
-        return
+    if dir_output is not None:
+        translator.translations_dir = Path(dir_output)
+        log.info(f"Las nuevas traducciones se guardarán en: {dir_output.parent}")
 
-    log.info(f"Las nuevas traducciones se guardarán en: {file_path.parent}")
+    dir_output = translator.translations_dir / f'{args.lang}.json'
 
-    translator = Translator(file_path.parent)
+    # if not dir_output.exists() or not dir_output.is_dir():
+    #     log.error(f"El directorio '{dir_output}' no existe.")
+    #     return
+
     translator.add_trans(key=args.key, lang=args.lang, value=args.value)
-    log.info(f"Traducción agregada en {file_path}: {args.key} -> {args.value} en {args.lang}.")
+    # log.info(f"Traducción agregada en {dir_output}: {args.key} -> {args.value} >> {args.lang}.")
+    log.info(f"Traducción agregada en {dir_output}: {args.key} -> {args.value}.")
 
 
 def handle_auto_translate(args):

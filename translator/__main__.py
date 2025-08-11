@@ -34,6 +34,8 @@ if __name__ == "__main__":
     - python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --lang all --output D:\Coders\ToolsTranslator\struct_files\output --overwrite --force
     
     - python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --lang all --output D:\Coders\ToolsTranslator\struct_files\output --overwrite --force --force-all
+    
+    - python -m translator add D:\Coders\ToolsTranslator\struct_files\ch.json "hola mundo" --lang es
     '''
 
     main()

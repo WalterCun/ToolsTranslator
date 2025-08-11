@@ -8,6 +8,8 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings
 
+from translator import __version__
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,15 +20,9 @@ class Settings(BaseSettings):
     Provides a structure for defining application settings with default values,
     ensuring easy maintainability and adherence to consistent defaults.
 
-    :ivar app_name: Name of the application.
-    :type app_name: str
-    :ivar app_version: Version of the application.
-    :type app_version: str
-    :ivar debug: Indicates whether to run the application in debug mode.
-    :type debug: bool
     """
     APP_NAME: str = "Tools Translator"
-    APP_VERSION: str = "0.1.0"
+    APP_VERSION: str = __version__
     DEBUG: bool = True
 
     BASE_DIR: Path = Path(__file__).resolve().parent.parent
@@ -39,20 +35,17 @@ class Settings(BaseSettings):
         "Content-Type": "application/json"
     }
 
-
-
-
     class Config:
         """
         Handles application configuration and loading of environment variables.
 
         This class provides mechanisms to load configuration data required for the
-        application, utilizing environment variables from a specified `.env` file.
+        application, using environment variables from a specified `.env` file.
         It aims to centralize the configuration process, ensuring a structured
         approach to managing environment-specific settings.
 
         :ivar env_file: The path to the `.env` file containing environment variables.
-        :type env_file: str
+        :type env_file: Str
         """
         env_file = str(Path(__file__).resolve().parent.parent / ".env")  # Ruta al archivo .env
 
