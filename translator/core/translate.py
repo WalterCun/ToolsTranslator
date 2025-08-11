@@ -3,9 +3,11 @@
 
 """ translator/core/translate.py """
 import json
+import hashlib
+import os
 import logging
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, Union, Optional, Literal, Tuple
 
 from translator.config import settings
 from translator.api.translate_api import LibreTranslate
@@ -137,23 +139,48 @@ class Translator:
     DEFAULT_MISSING_KEY_MESSAGE = "Key no Implemented"
 
     def __init__(self, translations_dir: Path = settings.BASE_DIR / 'langs', default_lang="en",
-                 validate_or_correct_connection: bool = False):
-        self.api = LibreTranslate(connection_validate=validate_or_correct_connection)
+                 validate_or_correct_connection: bool = False, nested: Optional[bool] = None,
+                 auto_add_missing_keys: Optional[bool] = None,
+                 validation_mode: Literal['mtime', 'hash'] = "mtime"):
+        """
 
+        :param translations_dir:
+        :param default_lang:
+        :param validate_or_correct_connection:
+        :param nested:
+        :param auto_add_missing_keys:
+        :param validation_mode:
+        """
+        # Inicializar logger
+        self.log = logging.getLogger(__name__)
+        # validar y cargar modo de validacion de archivo de traducciones
+        if validation_mode not in {"mtime", "hash"}:
+            raise ValueError('validation_mode debe ser "mtime" o "hash"')
+        self.validation_mode = validation_mode
+        # Inicializar directorio de traducciones
         self.translations_dir = Path(translations_dir)
+        # Crear directorio de traducciones si no existe
         self.translations_dir.mkdir(parents=True, exist_ok=True)
-
+        # Cargar idioma por default
         self._current_lang = default_lang
+        # Inicializar diccionario de traducciones
         self.dict_trans = {}
 
-        # Crear el directorio de traducciones si no existe
-        self.language_support = list(self.api.get_supported_languages(default_lang, to_list=True))
+        # Cache: { lang: (data, marker) } -> marker = mtime o hash
+        self._cache: Dict[str, Tuple[Dict, Union[float, str]]] = {}
 
+        # Opciones de anidamiento de claves
+        self._global_nested = nested
+        # Opciones de agregar claves faltantes automaticamente
+        self._global_auto_add_missing_keys = auto_add_missing_keys
+
+        # Inicializar api de traduccion
+        self.api = LibreTranslate(connection_validate=validate_or_correct_connection)
+        # Inicializar lista de idiomas soportados
+        self.language_support = self.api.get_supported_languages(default_lang, to_list=True)
         if self.language_support:
             self.language_support.append('auto')
-
-        self.log = logging.getLogger(__name__)
-
+        # Cargar traducciones por defecto
         self.dict_trans = self._load_translations(default_lang)
 
     @property
@@ -190,6 +217,23 @@ class Translator:
         self.dict_trans = self._load_translations(value)
         self._current_lang = value
 
+    @property
+    def nested(self):
+        """"""
+        return self._global_nested
+
+    @nested.setter
+    def nested(self, value: bool):
+        self._global_nested = value
+
+    @property
+    def auto_add_missing_keys(self):
+        return self._global_auto_add_missing_keys
+
+    @auto_add_missing_keys.setter
+    def auto_add_missing_keys(self, value: bool):
+        self._global_auto_add_missing_keys = value
+
     def _validate_lang(self, lang) -> bool:
         """
         Validates whether the provided language is supported or set to 'auto'.
@@ -204,9 +248,7 @@ class Translator:
         :return: A boolean indicating whether the language is valid or set to 'auto'.
         :rtype: bool
         """
-        if lang not in self.language_support:
-            return False
-        return True
+        return lang in self.language_support
 
     def _get_translation_file(self, lang) -> Path:
         """
@@ -216,6 +258,19 @@ class Translator:
         :return: Ruta al archivo de traducción.
         """
         return self.translations_dir / f"{lang}.json"
+
+    def _get_file_marker(self, file_path: Path) -> Optional[Union[float, str]]:
+        """Obtiene mtime o hash del archivo según el modo."""
+        if not file_path.exists():
+            return None
+        if self.validation_mode == "mtime":
+            return os.path.getmtime(file_path)
+        else:  # hash mode
+            hasher = hashlib.md5()
+            with file_path.open("rb") as f:
+                for chunk in iter(lambda: f.read(8192), b""):
+                    hasher.update(chunk)
+            return hasher.hexdigest()
 
     def _load_translations(self, lang) -> Dict:
         """
@@ -229,11 +284,22 @@ class Translator:
                 f"Invalid language code: {lang}. Supported languages: {', '.join(self.language_support)}")
 
         file_path = self._get_translation_file(lang)
-        if file_path.exists():
-            with file_path.open(encoding="utf-8") as file:
-                return json.load(file)
-        else:
+        marker = self._get_file_marker(file_path)
+
+        if lang in self._cache:
+            cached_data, cached_marker = self._cache[lang]
+            if cached_marker == marker:
+                return cached_data  # Cache válido
+
+        # Si llegamos aquí, es porque no hay cache o el archivo cambió
+        if not file_path.exists():
+            self._cache[lang] = ({}, marker)
             return {}
+
+        with file_path.open(encoding="utf-8") as file:
+            data = json.load(file)
+            self._cache[lang] = (data, marker)
+            return data
 
     def _save_translations(self, lang, translations, force=False) -> None:
         """
@@ -275,21 +341,29 @@ class Translator:
 
         return data
 
-    def add_trans(self, key: str, lang: str, value: str, force: bool = False, nested: bool = True) -> None:
+    def add_trans(self, key: str, lang: str, value: str, force: bool = False, nested: Optional[bool] = None) -> None:
         """
         Agrega una traducción para una clave en un idioma específico.
         Soporta claves anidadas cuando nested=True.
+
+        Precedencia para "nested":
+        - Valor del métod (True/False) si no es None
+        - Valor global del constructor (self._global_nested) si fue provisto
+        - Comportamiento legacy por defecto: True
 
         :param key: La clave identificadora de la traducción (puede usar puntos para anidamiento).
         :param lang: El idioma de la traducción (e.g., 'en', 'es', 'fr').
         :param value: El texto traducido.
         :param force: Si fuerza la sobrescritura de traducciones existentes.
-        :param nested: Si usa estructura anidada para claves con puntos (True) o clave plana (False).
+        :param nested: Si usa estructura anidada para claves con puntos (True) o clave plana (False). Si es None, se
+                       usa la configuración global o el valor por defecto (True).
         """
         self.log.info(f'Obtener archivo lang({lang})')
         translations = self._load_translations(lang)
 
-        if nested and AuxiliarTranslationProxy.NESTED_KEY_SEPARATOR in key:
+        use_nested = nested or self._global_nested
+
+        if use_nested and AuxiliarTranslationProxy.NESTED_KEY_SEPARATOR in key:
             # Usar estructura anidada
             self.log.info(f'Agregando traducción anidada para clave: {key}')
             translations = self._set_nested_value(translations, key, value)
@@ -309,7 +383,7 @@ class Translator:
 
         # Actualizar el diccionario en memoria si es el idioma actual
         if lang == self._current_lang:
-            if nested and AuxiliarTranslationProxy.NESTED_KEY_SEPARATOR in key:
+            if use_nested and AuxiliarTranslationProxy.NESTED_KEY_SEPARATOR in key:
                 self.dict_trans = self._set_nested_value(self.dict_trans, key, value)
             else:
                 self.dict_trans[key] = value
@@ -355,10 +429,15 @@ class Translator:
 
         return current_value
 
-    def _translate(self, key: str, auto_add_missing: bool = False) -> str:
+    def _translate(self, key: str, auto_add_missing: Optional[bool] = None) -> str:
         """
         Traduce una clave al idioma actual SOLAMENTE.
         No busca en idiomas fallback para mostrar correctamente cuando una clave no está implementable.
+
+        Precedencia para "auto_add_missing":
+        - Valor del método (True/False) si no es None
+        - Valor global del constructor (self._global_auto_add_missing_keys) si fue provisto
+        - Comportamiento legacy por defecto: False
 
         :param key: La clave a traducir (puede incluir puntos para anidamiento).
         :param auto_add_missing: Si agregar automáticamente claves faltantes con mensaje por defecto.
@@ -376,13 +455,19 @@ class Translator:
         if direct_translation and not isinstance(direct_translation, dict):
             return str(direct_translation)
 
+        # Resolver comportamiento efectivo para auto-add
+        do_auto_add = auto_add_missing if auto_add_missing is not None else (
+            getattr(self, '_global_auto_add_missing_keys', None)
+            if getattr(self, '_global_auto_add_missing_keys', None) is not None else False
+        )
+
         # Si no hay traducción en el idioma actual, agregar mensaje por defecto
-        if auto_add_missing:
-            self.add_trans(key, self.lang, self.DEFAULT_MISSING_KEY_MESSAGE)
+        if do_auto_add:
+            self.add_trans(key, self.lang, self.DEFAULT_MISSING_KEY_MESSAGE, nested=None)
 
         return self.DEFAULT_MISSING_KEY_MESSAGE
 
-    def get_translation(self, key: str, auto_create: bool = False) -> str:
+    def get_translation(self, key: str, auto_create: Optional[bool] = None) -> str:
         """
         Métod público para obtener traducciones con control explícito sobre la creación de claves.
 
@@ -405,9 +490,18 @@ class Translator:
         return AuxiliarTranslationProxy(self, key)
 
 
-if __name__ == '__main__':
-    trans = Translator()
-    trans.lang = "es"
-
-    # Test con clave que existe en en.json pero no en es.json
-    print(f"trans.user.messages.welcome = {trans.user.messages.welcome}")
+# if __name__ == '__main__':
+#     trans = Translator()
+#     trans.lang = "es"
+#
+#     trans.nested = False
+#     trans.add_trans("user.messages.welcome", "es", "Bienvenido")
+#     trans.add_trans("user.messages.bay", "es", "Adios", nested=True)
+#
+#     trans.auto_add_missing_keys = False
+#     trans.add_trans("user.messages.baby", "es", "Bebe")
+#
+#     trans.get_translation("user.messages.babies", auto_create=True)
+#     print(trans.user.messages.boyas)
+#     trans.auto_add_missing_keys = True
+#     print(trans.user.messages.boys)
