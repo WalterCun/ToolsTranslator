@@ -57,7 +57,7 @@ class AuxiliarTranslationProxy:
             else:
                 # No hay estructura posible, marcar como terminal con mensaje por defecto
                 new_proxy._is_terminal = True
-                new_proxy._terminal_value = self.translator._translate(full_key)
+                new_proxy._terminal_value = self.translator.get_translation(full_key)
                 return new_proxy
 
     def _get_nested_value(self, data: dict, key_path: str):
@@ -81,10 +81,10 @@ class AuxiliarTranslationProxy:
 
     def _could_have_nested_structure(self, data: dict, key_path: str) -> bool:
         """
-        Check if there could be potential nested keys based on existing structure.
+        Check if there could be potential nested keys based on the existing structure.
 
         :param data: Dictionary to search in
-        :param key_path: Key path to check
+        :param key_path: a Key path to check
         :return: True if there could be potential nested matches
         """
         # Obtener la primera parte del key path
@@ -111,7 +111,7 @@ class AuxiliarTranslationProxy:
             return getattr(self, '_terminal_value', self.DEFAULT_MISSING_KEY_MESSAGE)
 
         if self.parent_key:
-            return self.translator._translate(self.parent_key)
+            return self.translator.get_translation(self.parent_key)
 
         return self.DEFAULT_MISSING_KEY_MESSAGE
 
@@ -126,7 +126,7 @@ class Translator:
     """
         Provides functionality to manage and translate text into multiple languages using JSON files.
 
-        This class facilitates working with multilingual translator by storing them in JSON
+        This class facilitates working with multilingual translators by storing them in JSON
         files. It allows adding translator, switching languages, looking up translator
         by keys, and handles fallback to a default language if a translation for the current
         language is not found.
@@ -207,7 +207,7 @@ class Translator:
         code. Raises a `ValueError` if the provided language code is not supported.
 
         :param value: The new language code to set.
-        :type value: str
+        :type value: Str
 
         :raises ValueError: If the provided language code is not supported.
         """
@@ -234,6 +234,7 @@ class Translator:
     def auto_add_missing_keys(self, value: bool):
         self._global_auto_add_missing_keys = value
 
+    # -----------------------------------------------------------------------------------------------------------------
     def _validate_lang(self, lang) -> bool:
         """
         Validates whether the provided language is supported or set to 'auto'.
@@ -244,9 +245,9 @@ class Translator:
         application's configuration.
 
         :param lang: The language code to validate.
-        :type lang: str
+        :type lang: Str is
         :return: A boolean indicating whether the language is valid or set to 'auto'.
-        :rtype: bool
+        :rtype: Bool
         """
         return lang in self.language_support
 
@@ -301,20 +302,20 @@ class Translator:
             self._cache[lang] = (data, marker)
             return data
 
-    def _save_translations(self, lang, translations, force=False) -> None:
+    def _save_translations(self, lang, translations) -> None:
         """
         Guarda las traducciones en un archivo JSON específico.
 
         :param lang: Código del idioma.
         :param translations: Diccionario de traducciones a guardar.
-        :param force: Parámetro opcional para compatibilidad
         """
 
         file_path = self._get_translation_file(lang)
         with file_path.open("w", encoding="utf-8") as file:
             json.dump(translations, file, ensure_ascii=False, indent=4)
 
-    def _set_nested_value(self, data: dict, key_path: str, value: str) -> dict:
+    @staticmethod
+    def _set_nested_value(data: dict, key_path: str, value: str) -> dict:
         """
         Establece un valor en un diccionario anidado usando una ruta de claves separadas por puntos.
 
@@ -410,7 +411,8 @@ class Translator:
         """
         self.add_trans(key, lang, value, force, nested=False)
 
-    def _get_nested_value(self, data: dict, key_path: str):
+    @staticmethod
+    def _get_nested_value(data: dict, key_path: str):
         """
         Obtiene un valor de un diccionario anidado usando una ruta de claves separadas por puntos.
 
@@ -467,6 +469,8 @@ class Translator:
 
         return self.DEFAULT_MISSING_KEY_MESSAGE
 
+    # -----------------------------------------------------------------------------------------------------------------
+
     def get_translation(self, key: str, auto_create: Optional[bool] = None) -> str:
         """
         Métod público para obtener traducciones con control explícito sobre la creación de claves.
@@ -488,7 +492,6 @@ class Translator:
 
         # Siempre devolver un proxy que maneje la lógica
         return AuxiliarTranslationProxy(self, key)
-
 
 # if __name__ == '__main__':
 #     trans = Translator()
