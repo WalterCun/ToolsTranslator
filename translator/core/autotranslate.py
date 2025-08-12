@@ -13,13 +13,13 @@ from translator.parses.tjson import JSON
 from translator.utils import TranslateFile
 from translator.utils.extract_info_file import extract_first_primitive_value
 
-logging.basicConfig(
-    level=logging.WARN,  # Establece el nivel mínimo de log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-    format="[%(asctime)s] - [%(name)s] - [%(levelname)s] -> %(message)s",  # Formato del log
-    handlers=[
-        logging.StreamHandler(),  # Enviar mensajes al terminal
-    ]
-)
+# logging.basicConfig(
+#     level=logging.WARN,  # Establece el nivel mínimo de log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+#     format="[%(asctime)s] - [%(name)s] - [%(levelname)s] -> %(message)s",  # Formato del log
+#     handlers=[
+#         logging.StreamHandler(),  # Enviar mensajes al terminal
+#     ]
+# )
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +30,7 @@ try:
 except ImportError:
     YAML = None
     log.warning("YAML package is not available. Please install 'pyyaml' package to process YAML files.")
+
 
 class AutoTranslate:
     """
@@ -108,12 +109,13 @@ class AutoTranslate:
             if isinstance(langs_from_args, list):
                 if 'all' in langs_from_args:
                     return [lang for lang in
-                            self.language_support] if self.args.overwrite else [lang for lang in self.language_support if
-                                                                               lang != lang_file]
+                            self.language_support] if self.args.overwrite else [lang for lang in self.language_support
+                                                                                if
+                                                                                lang != lang_file]
                 return [lang for lang in langs_from_args if
                         lang in self.language_support] if self.args.overwrite else [lang for lang in langs_from_args if
-                                                                                   lang in self.language_support if
-                                                                                   lang != lang_file]
+                                                                                    lang in self.language_support if
+                                                                                    lang != lang_file]
 
         if isinstance(self.lang_work, str):
             return [self.lang_work]
@@ -168,7 +170,7 @@ class AutoTranslate:
             return None
 
     @staticmethod
-    def _save_translated_data(output_file: Path, translated_data: List[tuple[str, str]] or Dict[str,str]):
+    def _save_translated_data(output_file: Path, translated_data: Optional[List[tuple[str, str]] or Dict[str, str]]):
         """
         Saves translated data to a specified JSON output file. This function serializes
         the provided translated data and writes it to the target file path.
@@ -191,8 +193,8 @@ class AutoTranslate:
         except Exception as e:
             log.error(f"Error al guardar {output_file}: {e}")
 
-    def extract_parse_file(self, path: Optional[Path] = None, to_dict: bool = False) -> list[tuple[
-        str, str]] or dict or None:
+    def extract_parse_file(self, path: Optional[Path] = None, to_dict: bool = False) -> Optional[
+        list[tuple[str, str]] or dict or None]:
         """
         Extracts and parses a file based on the file extension. Supports JSON, YAML, and YML
         formats. Depending on the specified parameters, the method can return either a
@@ -294,7 +296,6 @@ class AutoTranslate:
         )
 
         lang_work = self._get_target_languages(langs, lang_file)
-
 
         if not lang_work:
             log.error("No se especificaron idiomas válidos para trabajar.")
