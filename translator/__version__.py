@@ -4,7 +4,7 @@
 
 MAJOR = 0
 MINOR = 1
-MICRO = 11
+MICRO = 12
 RELEASE = True
 
 __version__ = '%d.%d.%d' % (MAJOR, MINOR, MICRO)

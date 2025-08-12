@@ -18,24 +18,29 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    '''
+    r'''
     EXAMPLES:
+    # Insertar texto en un archivo JSON con anidacion
+    - python -m translator add "texto" --lang es --nested --key main.header.btn.lb
     
-    - python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --lang es
+    # Insertar texto en un archivo JSON sin anidacion
+    - python -m translator add "texto" --lang es --key main.header.btn.lb
     
-    - python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --lang es --output D:\Coders\ToolsTranslator\struct_files\output
+    # Insertar texto en un archivo JSON con salida en archivo y directorio especifico
+    - python -m translator add "texto" --lang es --key main.header.btn.lb --output D:\Coders\ToolsTranslator\struct_files\output
+
+
+    # Auto traducir un archivo Json con salida en el directorio de origen
+    python -m translator auto-translate D:\Coders\ToolsTranslator\langs\es.json --langs en
     
-    - python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --output D:\Coders\ToolsTranslator\struct_files\output --lang en
+    # Auto traducir un archivo JSON con salida en directorio especifico
+    python -m translator auto-translate D:\Coders\ToolsTranslator\langs\es.json --output D:\Coders\ToolsTranslator\langs --langs en
     
-    - python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.yml --lang br --output D:\Coders\ToolsTranslator\struct_files\output
+    # Auto traducir un archivo JSON con salida en directorio de origen y forzar traducciones
+    python -m translator auto-translate D:\Coders\ToolsTranslator\langs\es.json --langs en --force
     
-    - python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --lang all --output D:\Coders\ToolsTranslator\struct_files\output --overwrite
-    
-    - python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --lang all --output D:\Coders\ToolsTranslator\struct_files\output --overwrite --force
-    
-    - python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --lang all --output D:\Coders\ToolsTranslator\struct_files\output --overwrite --force --force-all
-    
-    - python -m translator add D:\Coders\ToolsTranslator\struct_files\ch.json "hola mundo" --lang es
+    # Auto traducir un archivo JSON con salida en directorio de origen y sobreescribir traducciones existentes
+    python -m translator auto-translate D:\Coders\ToolsTranslator\langs\es.json --langs en --overwrite
     '''
 
     main()

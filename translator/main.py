@@ -6,12 +6,9 @@
 import argparse
 import logging
 import sys
-
 from pathlib import Path
 
-# from translator.models import InfoFile
 from translator.utils import TranslateFile
-
 from translator import AutoTranslate, Translator
 
 logging.basicConfig(
@@ -48,6 +45,10 @@ def main():
         add_parser.add_argument("--key", required=True, help="La clave de la traducción")
         add_parser.add_argument("--lang", help="El idioma (e.g., es, en, fr)", default="es")
         add_parser.add_argument("--output", help="Directorio de salida para los archivos de traduccion")
+        add_nested_group = add_parser.add_mutually_exclusive_group()
+        add_nested_group.add_argument("--nested", action="store_true",
+                                      help="Tratar claves con puntos como estructura anidada (por defecto: no especificado)")
+
 
         # Subcomando para traducción automática
         auto_translate_parser = subparsers.add_parser("auto-translate", help="Auto translate")
@@ -59,6 +60,9 @@ def main():
                                            help="Idiomas destino (e.g., es, en, fr)")
         auto_translate_parser.add_argument("--force", action="store_true", help="Forzar traducciones")
         auto_translate_parser.add_argument("--overwrite", action="store_true", help="Sobreescribir traducciones")
+        auto_nested_group = auto_translate_parser.add_mutually_exclusive_group()
+        auto_nested_group.add_argument("--nested", action="store_true",
+                                       help="Guardar archivos de salida anidados a partir de claves con puntos (por defecto)")
         args = parser.parse_args(sys.argv[1:])
 
         if args.command == "version":
@@ -79,16 +83,14 @@ def handle_add_text(args):
 
     if dir_output is not None:
         translator.translations_dir = Path(dir_output)
-        log.info(f"Las nuevas traducciones se guardarán en: {dir_output.parent}")
+        log.info(f"Las nuevas traducciones se guardarán en: {translator.translations_dir}")
 
     dir_output = translator.translations_dir / f'{args.lang}.json'
 
-    # if not dir_output.exists() or not dir_output.is_dir():
-    #     log.error(f"El directorio '{dir_output}' no existe.")
-    #     return
+    # Determinar preferencia de anidamiento: --nested -> True; si no se especifica, dejar None para mantener el comportamiento por defecto
+    nested_pref = True if getattr(args, 'nested', False) else None
+    translator.add_trans(key=args.key, lang=args.lang, value=args.value, nested=nested_pref)
 
-    translator.add_trans(key=args.key, lang=args.lang, value=args.value)
-    # log.info(f"Traducción agregada en {dir_output}: {args.key} -> {args.value} >> {args.lang}.")
     log.info(f"Traducción agregada en {dir_output}: {args.key} -> {args.value}.")
 
 

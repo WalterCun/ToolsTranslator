@@ -170,26 +170,27 @@ class AutoTranslate:
             return None
 
     @staticmethod
-    def _save_translated_data(output_file: Path, translated_data: Optional[List[tuple[str, str]] or Dict[str, str]]):
+    def _save_translated_data(output_file: Path, translated_data: Optional[List[tuple[str, str]] or Dict[str, str]],
+                              nested: bool = True):
         """
-        Saves translated data to a specified JSON output file. This function serializes
-        the provided translated data and writes it to the target file path.
+        Saves translated data to a specified JSON output file, either as a nested structure
+        (when nested=True) or as a flat dictionary using dot-separated keys (when nested=False).
 
-        :param output_file: Path instance representing the target file location for
-            saving the serialized JSON data.
-        :type output_file: Path
-
-        :param translated_data: Container holding the translated data. It can either
-            be a list of tuples where each tuple contains a key-value pair as
-            (original_text, translated_text), or a dictionary with keys as the source
-            texts and values as their corresponding translations.
-        :type translated_data: List[tuple[str, str]] or Dict[str, str]
-
+        :param output_file: Path instance representing the target file location for saving the data.
+        :param translated_data: List of tuples (key, value) or a dict of key->value.
+        :param nested: Whether to save as nested structure (default True) or flat.
         :return: None
         """
         json_instance = JSON(str(output_file))
         try:
-            json_instance.save_json_file(json_instance.deserializar_json(translated_data.items()))
+            if nested:
+                # Ensure we have an iterable of (key, value)
+                items = translated_data.items() if isinstance(translated_data, dict) else translated_data
+                json_instance.save_json_file(json_instance.deserializar_json(items))
+            else:
+                # Save as flat dictionary
+                flat_dict = translated_data if isinstance(translated_data, dict) else dict(translated_data or [])
+                json_instance.save_json_file(flat_dict)
         except Exception as e:
             log.error(f"Error al guardar {output_file}: {e}")
 
@@ -265,7 +266,13 @@ class AutoTranslate:
             output_file = output_dir / f"{lang}.json"
             translated_data = self._process_language_translation(lang, lang_file, base_data, output_file, force,
                                                                  overwrite)
-            self._save_translated_data(output_file, translated_data)
+            # Determinar preferencia de anidamiento para la salida
+            nested_pref = True
+            if hasattr(self.args, 'flat') and getattr(self.args, 'flat', False):
+                nested_pref = False
+            elif hasattr(self.args, 'nested') and getattr(self.args, 'nested', False):
+                nested_pref = True
+            self._save_translated_data(output_file, translated_data, nested=nested_pref)
 
         log.info('Finish converting language packages.')
 
