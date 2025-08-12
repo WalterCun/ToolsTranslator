@@ -27,24 +27,24 @@ requests_cache.install_cache(
 
 class LibreTranslate:
     """
-    Manages interactions with a LibreTranslate API instance, providing methods to translate
-    text and retrieve supported languages.
+    Cliente HTTP para interactuar con un servicio LibreTranslate.
 
-    This class is designed to interface with a specified LibreTranslate API endpoint. It
-    provides functionality to request the list of supported languages and perform text
-    translations while handling errors and retries. The translations are done using HTTP
-    POST requests. If the API responds with an error or the server is unreachable, the
-    class includes retry logic to reattempt the request a specified number of times.
-    Additionally, the supported language data is cached for efficient reuse.
+    Proporciona métodos para traducir texto, detectar idioma y obtener la lista de idiomas
+    soportados. Implementa reintentos ante errores transitorios y caching de respuestas
+    para mejorar el rendimiento.
 
-    :ivar url_translate: The URL endpoint used for the translation API requests.
-    :type url_translate: str
-    :ivar url_languages: The URL endpoint used for retrieving supported languages.
-    :type url_languages: str
-    :ivar max_retries: The maximum number of retries for requests in case of failure.
-    :type max_retries: int
-    :ivar retry_delay: The delay in seconds between retry attempts for failed requests.
-    :type retry_delay: int
+    Atributos:
+    - url_translate (str): Endpoint para traducción.
+    - url_languages (str): Endpoint para listar idiomas.
+    - url_detect (str): Endpoint para detección de idioma.
+    - max_retries (int): Número máximo de reintentos.
+    - retry_delay (int): Tiempo de espera entre reintentos (segundos).
+
+    Ejemplo de uso:
+        >>> from translator.api.translate_api import LibreTranslate
+        >>> lt = LibreTranslate(url="http://localhost:5000/")
+        >>> lt.translate("Hola mundo", source="es", target="en")
+        'Hello world'
     """
 
     def __init__(self, url: str = "http://localhost:5000/", max_retries=3, retry_delay=3, connection_validate:bool=False):
@@ -75,16 +75,14 @@ class LibreTranslate:
 
     def _request_supported_languages(self):
         """
-        Request a list of supported languages from the specified API endpoint.
+        Solicita al endpoint la lista de idiomas soportados.
 
-        This method sends a GET request to the URL stored in `self.url_languages`
-        using the headers defined in `settings.HEADERS`. It handles HTTP errors
-        by raising exceptions and clears the request cache in case of request
-        failures.
+        Envía un GET a `self.url_languages` usando los encabezados de `settings.HEADERS`.
+        Lanza excepciones ante errores HTTP y limpia la caché en caso de fallo.
 
-        :return: A JSON object containing the supported languages.
-        :rtype: Dict
-        :raises Exception: If an error occurs during the HTTP request.
+        :return: JSON con los idiomas soportados.
+        :rtype: dict
+        :raises Exception: Si ocurre un error durante la solicitud HTTP.
         """
         log.info("Solicitando lista de idiomas soportados...")
         try:
@@ -97,19 +95,17 @@ class LibreTranslate:
 
     def get_supported_languages(self, lang_base, to_list: bool = False):
         """
-        Retrieves a list of supported languages for translation based on the base language provided.
+        Obtiene la lista de idiomas soportados en función del idioma base.
 
-        If the base language is matched in the response, it returns the list of target languages.
-        Otherwise, if the base language is set to automatic detection ("auto"), it adds all
-        available language codes to a set and finally returns them as a list.
+        Si el idioma base coincide con alguno en la respuesta, devuelve los idiomas
+        destino soportados para ese origen. Si `lang_base` es "auto", devuelve
+        la lista completa de códigos de idioma disponibles.
 
-        :param to_list:
-        :param lang_base: Base language code to filter or retrieve available target languages.
-                          Use "auto" for automatic detection of all available languages.
+        :param to_list: Si True devuelve una lista simple de códigos, de lo contrario un dict nombre->código.
+        :param lang_base: Código de idioma base (por ejemplo, "es", "en" o "auto").
         :type lang_base: str
-        :return: A list of target language codes if the base language is found or 'auto' is specified.
-                 Returns an empty list if no supported languages are found or an error occurs.
-        :rtype: list
+        :return: Lista de códigos de idiomas destino (o dict) según `to_list`.
+        :rtype: list | dict
         """
         try:
             response = self._request_supported_languages()
@@ -130,6 +126,13 @@ class LibreTranslate:
             return self.get_supported_languages(lang_base, to_list)
 
     def detect_language(self, text) -> str | tuple[Any, Any]:
+        """
+        Detecta el idioma de un texto usando el servicio remoto.
+
+        :param text: Texto a evaluar.
+        :return: Tupla con (código de idioma, confianza) o ("No detect a language", None) si falla.
+        :rtype: tuple[str, float] | tuple[str, None]
+        """
         try:
             response = requests.post(self.url_detect, json={'q':text}, headers=settings.HEADERS)
             response.raise_for_status()
@@ -140,22 +143,15 @@ class LibreTranslate:
 
     def translate(self, text, source, target, retry=0):
         """
-        Translates a given text from a source language to a target language using a remote
-        translation API. This method handles retries if the API call fails and ensures
-        the response is parsed correctly to extract the translated text.
+        Traduce un texto desde un idioma origen a uno destino usando la API remota.
 
-        :param text: str
-            The text to be translated.
-        :param source: Optional[str]
-            The source language code. If None or empty, the API will auto-detect the language.
-        :param target: str
-            The target language code to which the text needs to be translated.
-        :param retry: int
-            The current retry attempt count, used for managing retries on failure.
+        :param text: Texto a traducir.
+        :param source: Código de idioma de origen. Si es None o vacío, la API auto-detecta el idioma.
+        :param target: Código de idioma de destino.
+        :param retry: Contador de reintentos (uso interno para gestionar fallos transitorios).
 
-        :return: str
-            Returns the translated text if successful. If the maximum retries are
-            exceeded or an error occurs, an empty string is returned.
+        :return: Texto traducido si tiene éxito; si se agotan los reintentos o hay error, retorna "".
+        :rtype: str
         """
 
         payload = {

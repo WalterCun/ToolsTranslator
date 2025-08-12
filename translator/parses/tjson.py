@@ -4,9 +4,10 @@
 import json
 import logging
 from pathlib import Path
-from typing import Union, Dict, List, Tuple
+from typing import Union, Dict, List, Tuple, Optional
 
 log = logging.getLogger(__name__)
+
 
 class JSON:
     """
@@ -49,8 +50,8 @@ class JSON:
         return text_entries
 
     @staticmethod
-    def deserializar_json(entries: List[tuple[str, str]] or Dict[str,str]) -> list[tuple[
-        str, str]] or dict or None:
+    def deserializar_json(entries: Optional[List[tuple[str, str]] or Dict[str, str]]) -> Optional[list[tuple[
+        str, str]] or dict or None]:
         """
         Reconstruye una estructura JSON de diccionarios anidados a partir de una lista de tuplas (ruta, valor).
 
@@ -138,7 +139,6 @@ class JSON:
         except Exception as e:
             log.error(f"Error al guardar el archivo JSON: {e}")
             raise
-
 
 # Ejemplo de uso de la clase GestionarJSON
 # if __name__ == "__main__":

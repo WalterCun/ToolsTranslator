@@ -13,13 +13,13 @@ from translator.parses.tjson import JSON
 from translator.utils import TranslateFile
 from translator.utils.extract_info_file import extract_first_primitive_value
 
-logging.basicConfig(
-    level=logging.WARN,  # Establece el nivel mínimo de log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-    format="[%(asctime)s] - [%(name)s] - [%(levelname)s] -> %(message)s",  # Formato del log
-    handlers=[
-        logging.StreamHandler(),  # Enviar mensajes al terminal
-    ]
-)
+# logging.basicConfig(
+#     level=logging.WARN,  # Establece el nivel mínimo de log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+#     format="[%(asctime)s] - [%(name)s] - [%(levelname)s] -> %(message)s",  # Formato del log
+#     handlers=[
+#         logging.StreamHandler(),  # Enviar mensajes al terminal
+#     ]
+# )
 
 log = logging.getLogger(__name__)
 
@@ -31,44 +31,49 @@ except ImportError:
     YAML = None
     log.warning("YAML package is not available. Please install 'pyyaml' package to process YAML files.")
 
+
 class AutoTranslate:
     """
-    Handles file translation tasks with built-in language detection and API integration.
+    Automatiza la traducción de archivos con detección de idioma y soporte de API.
 
-    This class is designed to facilitate the process of translating files in various languages
-    while detecting the base language of the content. It ensures compatibility with translation
-    APIs and streamlines tasks related to handling translations, including parsing and saving
-    language files.
+    Esta clase facilita traducir contenidos a múltiples idiomas, detectando el idioma base
+    del archivo y utilizando una API (LibreTranslate) para generar las traducciones.
+    Además, permite serializar/deserializar archivos (JSON/YAML) y guardar los resultados
+    en formato anidado o plano según preferencia.
 
-    :ivar api: Instance of the translation API used for managing translation operations.
-    :type api: LibreTranslate
-    :ivar language_support: List of supported languages for translation based on API response.
-    :type language_support: List[str]
-    :ivar fileTranslation: An object containing file metadata and content relevant for translation.
-    :type file_translation: TranslateFile
-    :ivar lang_work: The detected or selected working language(s) for translation.
-    :type lang_work: Str or list[str]
-    :ivar confidence: Confidence score for the detected language.
-    :type confidence: Float
-    :ivar args: Optional configuration parameters for translation settings.
-    :type args: Namespace
+    Atributos principales:
+    - api: Instancia de la API de traducción (LibreTranslate).
+    - language_support: Lista de idiomas soportados por la API.
+    - fileTranslation: Metadatos y contenido del archivo a traducir (TranslateFile).
+    - lang_work: Idioma(s) detectado(s) o seleccionado(s) para trabajar.
+    - confidence: Confianza de la detección del idioma.
+    - args: Parámetros de configuración (Namespace) provenientes de la CLI u otros.
+
+    Ejemplo de uso:
+        >>> from argparse import Namespace
+        >>> from pathlib import Path
+        >>> from translator.utils import TranslateFile
+        >>> from translator.core.autotranslate import AutoTranslate
+        >>> tf = TranslateFile(Path('langs/es.json'))
+        >>> args = Namespace(base='es', langs=['en', 'fr'], output=tf.directory, force=False, overwrite=False, nested=True)
+        >>> AutoTranslate(tf, args=args).worker()
     """
 
     def __init__(self, file_translation: TranslateFile, args: Namespace = Namespace(base=None)):
         """
-        Initializes the class for handling file translation tasks with language detection
-        and setup for translation API support. This class ensures that the file translation
-        process is integrated with a language detection feature to provide insights
-        and additional functionality.
+        Inicializa el traductor automático con detección de idioma y configuración de API.
 
-        :param file_translation: An instance of the TranslateFile class that carries details
-            of the file's content and related metadata necessary for processing the
-            translation.
+        :param file_translation: Instancia de TranslateFile con la ruta, metadatos y contenido del archivo base.
         :type file_translation: TranslateFile
-        :param args: An instance of Namespace that provides configurable options
-            such as the base language or other settings needed for customization.
-            Defaults to a Namespace with a base of None.
+        :param args: Opciones de configuración (Namespace), por ejemplo base, langs, output, force, overwrite, nested.
         :type args: Namespace
+
+        Ejemplo:
+            >>> from argparse import Namespace
+            >>> from translator.utils import TranslateFile
+            >>> tf = TranslateFile('langs/es.json')
+            >>> args = Namespace(base='es', langs=['en'], output=tf.directory, force=False, overwrite=False, nested=True)
+            >>> at = AutoTranslate(tf, args)
         """
         from translator.api.translate_api import LibreTranslate
         self.api = LibreTranslate()
@@ -90,11 +95,15 @@ class AutoTranslate:
 
     def _get_target_languages(self, langs, lang_file):
         """
-        Helper method to determine the list of valid target languages.
+        Determina la lista de idiomas destino válidos.
 
-        :param langs: A list or a single string specifying the target languages.
-        :param lang_file: The base language file to exclude from target languages if 'all' is specified.
-        :return: A list of valid languages.
+        - Si se pasa una lista o cadena, filtra contra los idiomas soportados.
+        - Si se usan argumentos de CLI (args.langs), respeta 'all', overwrite y exclusiones del idioma base.
+        - Si no hay argumentos, usa el idioma detectado.
+
+        :param langs: Lista o cadena con los idiomas destino.
+        :param lang_file: Idioma base (usado para excluir cuando no se sobrescribe).
+        :return: Lista de códigos de idioma válidos.
         """
         if langs:
             if isinstance(langs, list):
@@ -108,12 +117,13 @@ class AutoTranslate:
             if isinstance(langs_from_args, list):
                 if 'all' in langs_from_args:
                     return [lang for lang in
-                            self.language_support] if self.args.overwrite else [lang for lang in self.language_support if
-                                                                               lang != lang_file]
+                            self.language_support] if self.args.overwrite else [lang for lang in self.language_support
+                                                                                if
+                                                                                lang != lang_file]
                 return [lang for lang in langs_from_args if
                         lang in self.language_support] if self.args.overwrite else [lang for lang in langs_from_args if
-                                                                                   lang in self.language_support if
-                                                                                   lang != lang_file]
+                                                                                    lang in self.language_support if
+                                                                                    lang != lang_file]
 
         if isinstance(self.lang_work, str):
             return [self.lang_work]
@@ -123,15 +133,15 @@ class AutoTranslate:
     def _process_language_translation(self, lang: str, lang_file: str, base_data: dict, output_file: Path, force: bool,
                                       overwrite: bool) -> Union[list[tuple[str, str]]]:
         """
-        Processes the translation for a specific language, using existing translations if available.
+        Procesa la traducción para un idioma específico, reutilizando traducciones existentes si están disponibles.
 
-        :param lang: The language to translate to.
-        :param lang_file: The base language file.
-        :param base_data: The base language data.
-        :param output_file: The path to the output file for this language.
-        :param force: Whether to force translation.
-        :param overwrite: Whether to overwrite existing translations.
-        :return: A dictionary containing the translated data.
+        :param lang: Idioma objetivo.
+        :param lang_file: Idioma base del archivo de origen.
+        :param base_data: Datos base (clave -> texto) del idioma origen.
+        :param output_file: Ruta del archivo de salida para este idioma.
+        :param force: Si es True, fuerza traducir aunque exista traducción previa.
+        :param overwrite: Si es True, sobrescribe traducciones existentes.
+        :return: Diccionario con los datos traducidos.
         """
         try:
             translated_data = self.extract_parse_file(output_file, to_dict=True)
@@ -151,13 +161,13 @@ class AutoTranslate:
 
     def _translate_key(self, base_value: str, lang_file: str, lang: str, key: str) -> Optional[str]:
         """
-        Translates a single key value.
-
-        :param base_value: The value to translate.
-        :param lang_file: The base language file.
-        :param lang: The target language.
-        :param key: The key being translated.
-        :return: Translated text, or None if translation fails.
+        Traduce el valor de una clave.
+        
+        :param base_value: Texto base a traducir.
+        :param lang_file: Idioma origen del archivo base.
+        :param lang: Idioma destino.
+        :param key: Clave asociada al texto.
+        :return: Texto traducido o None si la traducción falla.
         """
         try:
             translated_text = self.api.translate(base_value, lang_file, lang)
@@ -168,52 +178,46 @@ class AutoTranslate:
             return None
 
     @staticmethod
-    def _save_translated_data(output_file: Path, translated_data: List[tuple[str, str]] or Dict[str,str]):
+    def _save_translated_data(output_file: Path, translated_data: Optional[List[tuple[str, str]] or Dict[str, str]],
+                              nested: bool = True):
         """
-        Saves translated data to a specified JSON output file. This function serializes
-        the provided translated data and writes it to the target file path.
+        Guarda datos traducidos en un archivo JSON, ya sea como estructura anidada
+        (nested=True) o como diccionario plano con claves separadas por puntos (nested=False).
 
-        :param output_file: Path instance representing the target file location for
-            saving the serialized JSON data.
-        :type output_file: Path
-
-        :param translated_data: Container holding the translated data. It can either
-            be a list of tuples where each tuple contains a key-value pair as
-            (original_text, translated_text), or a dictionary with keys as the source
-            texts and values as their corresponding translations.
-        :type translated_data: List[tuple[str, str]] or Dict[str, str]
-
+        :param output_file: Ruta del archivo de salida.
+        :param translated_data: Lista de tuplas (clave, valor) o diccionario clave->valor.
+        :param nested: Si True, guarda anidado; si False, guarda plano.
         :return: None
         """
         json_instance = JSON(str(output_file))
         try:
-            json_instance.save_json_file(json_instance.deserializar_json(translated_data.items()))
+            if nested:
+                # Asegurar iterable de (clave, valor)
+                items = translated_data.items() if isinstance(translated_data, dict) else translated_data
+                json_instance.save_json_file(json_instance.deserializar_json(items))
+            else:
+                # Guardar como diccionario plano
+                flat_dict = translated_data if isinstance(translated_data, dict) else dict(translated_data or [])
+                json_instance.save_json_file(flat_dict)
         except Exception as e:
             log.error(f"Error al guardar {output_file}: {e}")
 
-    def extract_parse_file(self, path: Optional[Path] = None, to_dict: bool = False) -> list[tuple[
-        str, str]] or dict or None:
+    def extract_parse_file(self, path: Optional[Path] = None, to_dict: bool = False) -> Optional[
+        list[tuple[str, str]] or dict or None]:
         """
-        Extracts and parses a file based on the file extension. Supports JSON, YAML, and YML
-        formats. Depending on the specified parameters, the method can return either a
-        serialized dictionary (when `to_dict` is True) or a list of serialized tuples.
+        Extrae y parsea un archivo según su extensión (JSON/YAML/YML).
 
-        If the file path does not exist, it will return an empty dictionary for `to_dict=True` or
-        an empty list otherwise. For unsupported file extensions, a ValueError is raised.
+        Dependiendo de `to_dict`, devuelve un diccionario (True) o una lista de tuplas
+        (False). Si la ruta no existe, retorna un dict vacío (to_dict=True) o una lista vacía.
+        Para extensiones no soportadas se lanza ValueError.
 
-        :param path: The path of the file to be extracted and parsed. If None, uses the default
-                     path provided during initialization (optional).
-        :param to_dict: Indicates whether the output should be serialized as a dictionary. If
-                        False, the output will be serialized as a list of tuples (optional).
-        :type path: Str or None
+        :param path: Ruta del archivo a procesar. Si es None usa la ruta inicial del objeto.
+        :param to_dict: Si True, devuelve dict; si False, lista de tuplas.
+        :type path: str | Path | None
         :type to_dict: bool
-        :return: Returns the serialized file contents. The type of the return value depends on
-                 the file extension and the `to_dict` flag. For JSON and YAML/YML files, it
-                 returns either a dictionary or a list of tuples. For unsupported extensions
-                 (e.g., 'ts'), it returns None. In case the file is not found, returns an
-                 empty dictionary or list depending on the flag.
-        :rtype: List[tuple[str, str]] | dict | None
-        :raises ValueError: If an unsupported file extension is used.
+        :return: Contenido serializado del archivo según `to_dict` y formato.
+        :rtype: list[tuple[str, str]] | dict | None
+        :raises ValueError: Si se usa una extensión no soportada.
         """
         file_path = path if isinstance(path, Path) else path if path else Path(self.fileTranslation.path)
         if not file_path.exists():
@@ -263,7 +267,13 @@ class AutoTranslate:
             output_file = output_dir / f"{lang}.json"
             translated_data = self._process_language_translation(lang, lang_file, base_data, output_file, force,
                                                                  overwrite)
-            self._save_translated_data(output_file, translated_data)
+            # Determinar preferencia de anidamiento para la salida
+            nested_pref = True
+            if hasattr(self.args, 'flat') and getattr(self.args, 'flat', False):
+                nested_pref = False
+            elif hasattr(self.args, 'nested') and getattr(self.args, 'nested', False):
+                nested_pref = True
+            self._save_translated_data(output_file, translated_data, nested=nested_pref)
 
         log.info('Finish converting language packages.')
 
@@ -294,7 +304,6 @@ class AutoTranslate:
         )
 
         lang_work = self._get_target_languages(langs, lang_file)
-
 
         if not lang_work:
             log.error("No se especificaron idiomas válidos para trabajar.")
