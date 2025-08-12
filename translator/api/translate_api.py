@@ -143,22 +143,15 @@ class LibreTranslate:
 
     def translate(self, text, source, target, retry=0):
         """
-        Translates a given text from a source language to a target language using a remote
-        translation API. This method handles retries if the API call fails and ensures
-        the response is parsed correctly to extract the translated text.
+        Traduce un texto desde un idioma origen a uno destino usando la API remota.
 
-        :param text: str
-            The text to be translated.
-        :param source: Optional[str]
-            The source language code. If None or empty, the API will auto-detect the language.
-        :param target: str
-            The target language code to which the text needs to be translated.
-        :param retry: int
-            The current retry attempt count, used for managing retries on failure.
+        :param text: Texto a traducir.
+        :param source: Código de idioma de origen. Si es None o vacío, la API auto-detecta el idioma.
+        :param target: Código de idioma de destino.
+        :param retry: Contador de reintentos (uso interno para gestionar fallos transitorios).
 
-        :return: str
-            Returns the translated text if successful. If the maximum retries are
-            exceeded or an error occurs, an empty string is returned.
+        :return: Texto traducido si tiene éxito; si se agotan los reintentos o hay error, retorna "".
+        :rtype: str
         """
 
         payload = {
