@@ -161,7 +161,7 @@ class Translator:
 
     DEFAULT_MISSING_KEY_MESSAGE = "Key no Implemented"
 
-    def __init__(self, translations_dir: Path = settings.BASE_DIR / 'langs', default_lang="en",
+    def __init__(self, translations_dir: Path = None, default_lang="en",
                  validate_or_correct_connection: bool = False, nested: Optional[bool] = None,
                  auto_add_missing_keys: Optional[bool] = None,
                  validation_mode: Literal['mtime', 'hash'] = "mtime"):
@@ -182,8 +182,17 @@ class Translator:
         if validation_mode not in {"mtime", "hash"}:
             raise ValueError('validation_mode debe ser "mtime" o "hash"')
         self.validation_mode = validation_mode
-        # Inicializar directorio de traducciones
-        self.translations_dir = Path(translations_dir)
+        # Si no se especifica, usar './locale' en el directorio actual
+        if translations_dir is None:
+            # Buscar en variable de entorno primero, luego directorio actual
+            env_dir = os.getenv('TRANSLATOR_LANGS_DIR')
+            if env_dir:
+                self.translations_dir = Path(env_dir)
+            else:
+                self.translations_dir = Path.cwd() / 'locale'
+        else:
+            self.translations_dir = Path(translations_dir)
+
         # Crear directorio de traducciones si no existe
         self.translations_dir.mkdir(parents=True, exist_ok=True)
         # Cargar idioma por default
