@@ -15,8 +15,18 @@ from translator.api.translate_api import LibreTranslate
 
 class AuxiliarTranslationProxy:
     """
-    Proxy class to handle nested translation access using dot notation.
-    Allows accessing nested dictionary keys as attributes.
+    Proxy para acceder a traducciones anidadas usando notación de puntos.
+
+    Permite acceder a claves de diccionarios anidados como si fueran atributos.
+    Este proxy solo resuelve el valor cuando se convierte a cadena (str) o
+    cuando el nodo es terminal.
+
+    Ejemplo:
+        >>> from translator.core.translate import Translator
+        >>> t = Translator(default_lang="es")
+        >>> t.add_trans("app.header.title", "es", "Título", nested=True)
+        >>> str(t.app.header.title)
+        'Título'
     """
     NESTED_KEY_SEPARATOR = "."
     DEFAULT_MISSING_KEY_MESSAGE = "Key no Implemented"
@@ -62,11 +72,11 @@ class AuxiliarTranslationProxy:
 
     def _get_nested_value(self, data: dict, key_path: str):
         """
-        Get value from a nested dictionary using a dot-separated key path.
+        Obtiene un valor de un diccionario anidado usando una ruta separada por puntos.
 
-        :param data: Dictionary to search in
-        :param key_path: Dot-separated key path
-        :return: Value if found, None otherwise
+        :param data: Diccionario donde buscar.
+        :param key_path: Ruta de claves separadas por puntos.
+        :return: Valor encontrado o None si no existe.
         """
         keys = key_path.split(self.NESTED_KEY_SEPARATOR)
         current_value = data
@@ -124,16 +134,29 @@ class AuxiliarTranslationProxy:
 
 class Translator:
     """
-        Provides functionality to manage and translate text into multiple languages using JSON files.
+    Gestor de traducciones basado en archivos JSON con soporte para claves anidadas.
 
-        This class facilitates working with multilingual translators by storing them in JSON
-        files. It allows adding translator, switching languages, looking up translator
-        by keys, and handles fallback to a default language if a translation for the current
-        language is not found.
+    Esta clase permite:
+    - Cargar y guardar archivos de traducción por idioma.
+    - Agregar traducciones (planas o anidadas mediante notación con puntos).
+    - Cambiar el idioma activo y obtener textos traducidos.
+    - Opcionalmente crear claves faltantes con un mensaje por defecto.
 
-        Attributes:
-            translations_dir (Path): Directory where translation files are stored.
-            _current_lang (str): Currently selected language code.
+    Atributos principales:
+    - translations_dir (Path): Directorio donde se almacenan los archivos de traducción.
+    - lang (str): Idioma actual.
+
+    Ejemplo de uso básico:
+        >>> from translator.core.translate import Translator
+        >>> t = Translator(default_lang="es")
+        >>> t.add_trans("app.header.title", "es", "Título", nested=True)
+        >>> t.lang = "es"
+        >>> t.get_translation("app.header.title")
+        'Título'
+
+    Acceso anidado mediante atributos (proxy):
+        >>> str(t.app.header.title)
+        'Título'
     """
 
     DEFAULT_MISSING_KEY_MESSAGE = "Key no Implemented"
@@ -143,13 +166,15 @@ class Translator:
                  auto_add_missing_keys: Optional[bool] = None,
                  validation_mode: Literal['mtime', 'hash'] = "mtime"):
         """
+        Inicializa el gestor de traducciones.
 
-        :param translations_dir:
-        :param default_lang:
-        :param validate_or_correct_connection:
-        :param nested:
-        :param auto_add_missing_keys:
-        :param validation_mode:
+        :param translations_dir: Directorio donde se almacenan los archivos JSON de traducción.
+        :param default_lang: Idioma inicial a cargar (por ejemplo, "es", "en").
+        :param validate_or_correct_connection: Si es True, valida/ayuda a iniciar el servicio LibreTranslate vía Docker.
+        :param nested: Control global para agregar claves anidadas cuando contienen puntos (True) o planas (False). Si es None, se decide por cada llamada.
+        :param auto_add_missing_keys: Si es True, crea claves faltantes con un mensaje por defecto cuando se consultan.
+        :param validation_mode: Modo de validación de caché de archivo ("mtime" por fecha de modificación o "hash" por hash MD5).
+        :raises ValueError: Si validation_mode no es "mtime" ni "hash" o si el idioma por defecto no es soportado.
         """
         # Inicializar logger
         self.log = logging.getLogger(__name__)
@@ -186,15 +211,14 @@ class Translator:
     @property
     def lang(self):
         """
-        Represents a language property accessor.
+        Propiedad que devuelve el idioma actual.
 
-        The `lang` property is designed to retrieve the current language setting.
-        This property provides a thread-safe mechanism for accessing the value of
-        the private `_current_lang` attribute. It maintains immutability by ensuring
-        that no external changes can be made directly to the attribute value.
+        Esta propiedad expone el código de idioma que está en uso en el traductor
+        (por ejemplo, "es", "en"). Se usa para determinar de qué archivo JSON
+        se leen las traducciones al consultar claves.
 
-        :return: The current language setting.
-        :rtype: Any
+        :return: Código del idioma actual.
+        :rtype: str
         """
         return self._current_lang
 
@@ -219,7 +243,16 @@ class Translator:
 
     @property
     def nested(self):
-        """"""
+        """
+        Control global de anidamiento de claves.
+
+        Si es True, al agregar traducciones con claves que contienen puntos
+        se crearán estructuras anidadas. Si es False, se tratarán como claves planas.
+        Si se deja en None, se decide por cada llamada a add_trans.
+
+        :return: Valor actual de la preferencia global de anidamiento.
+        :rtype: Optional[bool]
+        """
         return self._global_nested
 
     @nested.setter
@@ -228,6 +261,16 @@ class Translator:
 
     @property
     def auto_add_missing_keys(self):
+        """
+        Control global para creación automática de claves faltantes.
+
+        Si es True, cuando se solicite una clave inexistente mediante get_translation
+        o el proxy anidado, se insertará automáticamente en el archivo del idioma
+        actual con el valor por defecto "Key no Implemented".
+
+        :return: Estado actual de la creación automática.
+        :rtype: Optional[bool]
+        """
         return self._global_auto_add_missing_keys
 
     @auto_add_missing_keys.setter
@@ -237,17 +280,14 @@ class Translator:
     # -----------------------------------------------------------------------------------------------------------------
     def _validate_lang(self, lang) -> bool:
         """
-        Validates whether the provided language is supported or set to 'auto'.
+        Valida si el idioma proporcionado está soportado (o es 'auto').
 
-        This method checks if the given language parameter matches one of the
-        supported languages or is explicitly set to 'auto'. It ensures that the
-        input language is correctly validated for compatibility within the
-        application's configuration.
+        Verifica que el código de idioma exista en la lista de idiomas soportados
+        por la API configurada. Devuelve True si es válido o si es 'auto'.
 
-        :param lang: The language code to validate.
-        :type lang: Str is
-        :return: A boolean indicating whether the language is valid or set to 'auto'.
-        :rtype: Bool
+        :param lang: Código de idioma a validar (por ejemplo, 'es', 'en', 'auto').
+        :return: True si el idioma es válido, False en caso contrario.
+        :rtype: bool
         """
         return lang in self.language_support
 
