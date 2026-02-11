@@ -4,12 +4,12 @@ import pytest
 typer_testing = pytest.importorskip("typer.testing")
 CliRunner = typer_testing.CliRunner
 
-from translator.cli.app import app
+from toolstranslator.cli.app import app
 
 
 class _DoctorOkManager:
     def diagnostics(self):
-        from translator.docker_manager.manager import CheckResult
+        from toolstranslator.docker_manager.manager import CheckResult
 
         return [
             CheckResult("Docker instalado", True, "ok"),
@@ -19,7 +19,7 @@ class _DoctorOkManager:
 
 class _InstallFailManager:
     image = "libretranslate/libretranslate:latest"
-    container_name = "translator-libretranslate"
+    container_name = "toolstranslator-libretranslate"
 
     def docker_installed(self):
         return True
@@ -36,7 +36,7 @@ class _InstallFailManager:
 
 def test_doctor_reports_ready(monkeypatch):
     runner = CliRunner()
-    monkeypatch.setattr("translator.cli.app.DockerManager", _DoctorOkManager)
+    monkeypatch.setattr("toolstranslator.cli.app.DockerManager", _DoctorOkManager)
     result = runner.invoke(app, ["doctor"])
 
     assert result.exit_code == 0
@@ -45,7 +45,7 @@ def test_doctor_reports_ready(monkeypatch):
 
 def test_install_reports_actionable_error(monkeypatch):
     runner = CliRunner()
-    monkeypatch.setattr("translator.cli.app.DockerManager", _InstallFailManager)
+    monkeypatch.setattr("toolstranslator.cli.app.DockerManager", _InstallFailManager)
     result = runner.invoke(app, ["install"])
 
     assert result.exit_code == 2

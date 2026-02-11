@@ -1,9 +1,8 @@
 # Uso
 
 ## Proxy básico
-
 ```python
-from translator import Translator
+from toolstranslator import Translator
 
 translator = Translator(lang="es")
 translator.translate("Hola", source="es", target="en")
@@ -81,9 +80,9 @@ translator.convert_yaml_to_json("es.yaml", "es.json")
 > Requiere `toolstranslator[server]`
 
 ```bash
-translator install
-translator doctor
-translator status
+toolstranslator install
+toolstranslator doctor
+toolstranslator status
 ```
 
 `install` y `doctor` muestran progreso y recomendaciones accionables en consola.

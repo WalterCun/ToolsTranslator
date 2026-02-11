@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from translator.core.translator import Translator
-from translator.exceptions import ExtraNotInstalledError, LanguageNotAvailableError, ServiceUnavailableError
-from translator.file_handlers.json_handler import JsonHandler
+from toolstranslator.core.translator import Translator
+from toolstranslator.exceptions import ExtraNotInstalledError, LanguageNotAvailableError, ServiceUnavailableError
+from toolstranslator.file_handlers.json_handler import JsonHandler
 
 
 class _FailClient:
