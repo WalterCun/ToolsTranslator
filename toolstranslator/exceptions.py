@@ -1,5 +1,6 @@
 """Custom exceptions for ToolsTranslator."""
 
+
 class ToolsTranslatorError(Exception):
     """Base exception for the package."""
 
@@ -14,3 +15,7 @@ class ExtraNotInstalledError(ToolsTranslatorError):
 
 class TranslationFileError(ToolsTranslatorError):
     """Raised for translation file handling issues."""
+
+
+class LanguageNotAvailableError(ToolsTranslatorError):
+    """Raised when active language cannot be loaded and no fallback is available."""

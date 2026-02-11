@@ -10,7 +10,7 @@ app = typer.Typer(help="ToolsTranslator CLI")
 
 def _ensure_server_extra() -> None:
     # Typer is installed only with server extra in project metadata.
-    # This check provides an explicit message if command entrypoint is invoked manually.
+    # This check provides explicit message if command entrypoint is invoked manually.
     try:
         import typer as _  # noqa: F401
     except ImportError as exc:  # pragma: no cover
