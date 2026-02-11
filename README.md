@@ -1,132 +1,144 @@
 # ToolsTranslator
 
-Librería Python publicable en PyPI para:
+Librería Python para la gestión de traducciones y archivos de idioma en aplicaciones, con soporte opcional para traducción automática mediante LibreTranslate.
 
-- Proxy de traducción contra LibreTranslate.
-- Gestión de archivos de idioma (`.json`) con soporte opcional YAML.
-- Proxy dinámico de traducciones por atributos (`__getattr__`).
-- Generación automática de archivos de idioma desde un idioma base.
-- CLI opcional para instalar/diagnosticar LibreTranslate en Docker.
+## Características principales
+
+- **Gestión de archivos de idioma**: Carga y gestión de archivos `.json` (y opcionalmente `.yaml`/`.yml`).
+- **Acceso dinámico**: Acceso a claves de traducción mediante atributos (`trans.home.title`).
+- **Traducción automática**: Generación de archivos de idioma faltantes utilizando un servidor LibreTranslate.
+- **Modo Proxy**: Traducción de textos en tiempo real.
+- **CLI**: Herramientas de línea de comandos para gestionar el servidor de traducción (Docker).
 
 ## Instalación
 
-### Básica (modo proxy)
+### Básica (solo gestión de archivos)
 
 ```bash
 pip install toolstranslator
 ```
 
-### Extra YAML
+### Con soporte YAML
 
 ```bash
 pip install toolstranslator[yml]
 ```
 
-### Extra Server (CLI)
+### Con soporte para Servidor (CLI y Docker)
 
 ```bash
 pip install toolstranslator[server]
 ```
 
-## API principal
+## Uso Básico
+
+### Inicialización
 
 ```python
-from toolstranslator import Translator
+from translator import Translator
 
+# Inicializa el traductor apuntando a tu directorio de locales
 trans = Translator(
     lang="es",
     directory="./locales",
-    auto_add_missing_keys=True,
+    auto_add_missing_keys=True  # Crea claves faltantes automáticamente en el archivo
 )
 ```
 
-## Idioma por defecto + cambio en caliente
+### Acceso a traducciones
 
-```python
-trans = Translator(lang="es")
-trans.lang = "en"           # recarga sin reiniciar instancia
-trans.change_lang("fr")     # alternativa explícita
+Supongamos que tienes un archivo `locales/es.json`:
+```json
+{
+  "home": {
+    "title": "Bienvenido",
+    "button": "Entrar"
+  }
+}
 ```
 
-## Proxy por atributos dinámicos
+Puedes acceder a las traducciones así:
 
 ```python
-# es.json -> {"hola": "mundo", "bienvenida": {"usuario": "Hola"}}
-
-str(trans.hola)                # "mundo"
-str(trans.bienvenida.usuario)  # "Hola"
+print(trans.home.title)  # Salida: Bienvenido
+print(trans.get("home.button")) # Salida: Entrar
 ```
 
-## auto_add_missing_keys
+### Cambio de idioma
 
 ```python
-trans = Translator(lang="es", auto_add_missing_keys=True)
-str(trans.app.header.title)  # crea clave faltante en archivo de idioma
+trans.change_lang("en")
+# O mediante la propiedad
+trans.lang = "fr"
 ```
 
-- `True`: crea clave con valor `"TODO: agregar traducción"`.
-- `False`: no escribe archivo y devuelve el nombre de la clave.
-- Se puede cambiar en caliente:
+### Manejo de claves faltantes
+
+Si `auto_add_missing_keys=True`, al acceder a una clave que no existe, se añadirá al archivo del idioma actual con un valor por defecto ("TODO: agregar traducción").
 
 ```python
-trans.auto_add_missing_keys = False
+print(trans.new.key) # Escribe "new.key" en el archivo y devuelve el placeholder
 ```
 
-## Uso como proxy remoto
+## Funcionalidades Avanzadas
+
+### AutoTranslate (Generación de archivos)
+
+Esta funcionalidad permite generar archivos de traducción para nuevos idiomas basándose en un archivo existente. Requiere el extra `server` o un adaptador configurado.
+
+*Nota: Esta funcionalidad está diseñada para ser usada programáticamente o mediante scripts específicos, separada del flujo principal de la aplicación.*
 
 ```python
-translated = trans.translate("Hola mundo", source="es", target="en")
-```
+from translator.core.autotranslate import AutoTranslate, AutoTranslateOptions
+from translator.utils.fileinfo import TranslateFile
 
-Fallback cuando LibreTranslate no está disponible:
-
-```python
-translated = trans.translate(
-    "Hola mundo",
-    source="es",
-    target="en",
-    fallback=lambda text: f"[pending]{text}",
+# Configuración
+options = AutoTranslateOptions(
+    langs=["en", "fr"],
+    overwrite=False
 )
+file_info = TranslateFile("locales/es.json")
+
+# Ejecución (requiere servidor LibreTranslate activo si use_server=True)
+auto = AutoTranslate(file_info, options, use_server=True)
+result = auto.worker()
+
+print(f"Archivos generados: {result.generated_files}")
 ```
 
-## Generación de idiomas
+### CLI (Gestión del Servidor)
 
-```python
-trans.generate_language_file(
-    base_file="./locales/es.json",
-    target_lang="en",
-    output="./locales/en.json",
-    source_lang="es",
-    mark_pending=True,
-)
-```
-
-## CLI (extra `server`)
+Si instalaste con `[server]`, tienes acceso al comando `toolstranslator` para gestionar una instancia local de LibreTranslate usando Docker.
 
 ```bash
-toolstranslator install
+# Verificar estado del entorno
 toolstranslator doctor
+
+# Instalar y arrancar el servidor
+toolstranslator install
+
+# Ver estado
 toolstranslator status
+
+# Reiniciar servidor
 toolstranslator restart
-toolstranslator clean-server
 ```
 
-- `install`: prepara el servidor paso a paso con feedback completo.
-- `doctor`: diagnóstico accionable estilo doctor con resumen final.
-- `status`: estado rápido de contenedor/API.
-- `restart`: reinicio controlado del servidor.
-- `clean-server`: limpieza del contenedor para reprovisionar.
+## Estructura del Proyecto
 
-## Desde Git
+El proyecto se divide en:
 
-```bash
-pip install git+https://github.com/usuario/toolstranslator
-```
+- `translator/core`: Lógica principal (`Translator`, `AutoTranslate`).
+- `translator/adapters`: Adaptadores para servicios externos (LibreTranslate).
+- `translator/handlers`: Manejadores de formatos de archivo (JSON, YAML).
+- `translator/cli`: Interfaz de línea de comandos.
 
-## Documentación
+## Documentación Adicional
 
-- `docs/architecture.md`
-- `docs/installation.md`
-- `docs/usage.md`
-- `docs/cli.md`
-- `docs/extensibility.md`
+Consulta el directorio `docs/` para más detalles:
+
+- [Arquitectura](docs/architecture.md)
+- [Instalación](docs/installation.md)
+- [Uso](docs/usage.md)
+- [CLI](docs/cli.md)
+- [AutoTranslate](docs/autotranslate.md)

@@ -1,46 +1,75 @@
-# CLI
+# CLI de translator
 
-> Requiere `pip install toolstranslator[server]`
+translator incluye una interfaz de línea de comandos (CLI) para gestionar el servidor de traducción local basado en Docker.
 
-La CLI ya no opera en silencio. Todos los comandos muestran progreso, estado y acciones sugeridas.
+## Comandos Disponibles
 
-## `toolstranslator doctor`
+### `install`
 
-Diagnóstico completo estilo *doctor* con reporte por checks:
+Prepara y valida el entorno de ejecución de LibreTranslate paso a paso.
 
-- Docker instalado
-- Servicio Docker activo
-- Imagen LibreTranslate disponible
-- Contenedor existente/en ejecución
-- Conectividad de API (`/languages`)
+```bash
+translator install
+```
 
-Salida final:
+Este comando verifica:
+1.  Si Docker está instalado.
+2.  Si el servicio Docker está activo.
+3.  Si la imagen de LibreTranslate existe (la descarga si no).
+4.  Inicia el contenedor.
+5.  Verifica la conectividad del servidor.
 
-- `✔ Listo para usar`
-- `⚠ Parcialmente listo`
-- `✖ No operativo`
+### `doctor`
 
-Cada fallo incluye una sugerencia accionable (comando recomendado).
+Ejecuta un diagnóstico completo del entorno, similar a `flutter doctor`.
 
-## `toolstranslator install`
+```bash
+translator doctor
+```
 
-Provisiona el entorno de servidor paso a paso:
+Muestra el estado de cada componente (Docker, imagen, contenedor, API) y sugiere acciones correctivas si algo falla.
 
-1. Verifica Docker instalado.
-2. Verifica daemon Docker.
-3. Descarga imagen de LibreTranslate (si falta).
-4. Crea/inicia contenedor.
-5. Valida conectividad HTTP del servicio.
+### `status`
 
-En cada paso imprime progreso y, ante error, explica causa y cómo resolver.
+Muestra un resumen rápido del estado del servidor.
 
-## Nuevos comandos recomendados y añadidos
+```bash
+translator status
+```
 
-### `toolstranslator status`
-Chequeo rápido de `container_running` + `api_healthy`.
+Salida esperada:
+```
+container_running=True
+api_healthy=True
+details=ok
+```
 
-### `toolstranslator restart`
-Reinicia el contenedor LibreTranslate de forma controlada.
+### `restart`
 
-### `toolstranslator clean-server`
-Elimina contenedor para limpieza de entorno (conserva imagen).
+Reinicia el contenedor de LibreTranslate de forma controlada.
+
+```bash
+translator restart
+```
+
+Útil si el servidor deja de responder o necesitas aplicar cambios de configuración.
+
+### `clean-server`
+
+Elimina el contenedor de LibreTranslate (mantiene la imagen descargada).
+
+```bash
+translator clean-server
+```
+
+Utiliza este comando si quieres empezar desde cero o liberar recursos temporalmente.
+
+## Requisitos
+
+Para utilizar estos comandos, asegúrate de haber instalado translator con el extra `[server]`:
+
+```bash
+pip install translator[server]
+```
+
+Y tener Docker Desktop o Docker Engine instalado y ejecutándose en tu sistema.

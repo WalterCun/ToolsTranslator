@@ -1,88 +1,89 @@
-# Uso
+# Uso de ToolsTranslator
 
-## Proxy básico
+Esta guía cubre el uso básico y avanzado de la librería `ToolsTranslator` para gestionar traducciones en tus aplicaciones Python.
+
+## Inicialización
+
+Para comenzar, importa la clase `Translator` y crea una instancia. Puedes especificar el idioma inicial y el directorio donde se encuentran tus archivos de traducción.
+
 ```python
-from toolstranslator import Translator
+from translator import Translator
 
-translator = Translator(lang="es")
-translator.translate("Hola", source="es", target="en")
-```
-
-## Idioma por defecto y cambio en caliente
-```python
-trans = Translator(lang="es", directory="./locales")
-print(trans.lang)  # es
-
-trans.lang = "en"        # recarga archivo en caliente
-trans.change_lang("fr")  # alternativa explícita
-```
-
-Si el idioma solicitado no existe y hay idiomas disponibles, se lanza `LanguageNotAvailableError`.
-Opcionalmente se puede configurar `fallback_lang`.
-
-## Acceso dinámico por atributos (`__getattr__`)
-```python
-trans = Translator(lang="es", directory="./locales")
-
-str(trans.hola)               # "mundo"
-str(trans.bienvenida.usuario) # acceso anidado
-```
-
-## auto_add_missing_keys (crítico)
-```python
+# Inicializa el traductor apuntando a tu directorio de locales
 trans = Translator(
     lang="es",
     directory="./locales",
-    auto_add_missing_keys=True,
-)
-
-str(trans.dashboard.title)  # crea la clave faltante en disco
-```
-
-- Si `auto_add_missing_keys=True`: crea la clave faltante con `"TODO: agregar traducción"`.
-- Si `False`: devuelve la clave como fallback y no escribe archivo.
-- Se puede cambiar en caliente: `trans.auto_add_missing_keys = False`.
-
-## Generación de idioma
-```python
-trans.generate_language_file(
-    base_file="./locales/es.json",
-    target_lang="en",
-    output="./locales/en.json",
-    source_lang="es",
-    mark_pending=True,
+    auto_add_missing_keys=True  # Crea claves faltantes automáticamente en el archivo
 )
 ```
 
-## Traducción dinámica remota por valor
-Puedes marcar un valor para traducirse bajo demanda:
+## Acceso a Traducciones
+
+Supongamos que tienes un archivo `locales/es.json` con el siguiente contenido:
 
 ```json
 {
-  "hero": {
-    "title": {"__translate__": "Hola mundo", "source": "es", "target": "en"}
+  "home": {
+    "title": "Bienvenido",
+    "button": "Entrar"
   }
 }
 ```
 
-Al resolver la clave, el SDK usa LibreTranslate y aplica fallback seguro.
+Puedes acceder a las traducciones de dos formas:
 
-## Conversión JSON↔YAML
-> Requiere `toolstranslator[yml]`
+### 1. Acceso por Atributos (Recomendado)
+
+Esta forma es más legible y permite navegar por la estructura anidada del JSON como si fueran objetos Python.
 
 ```python
-translator.convert_json_to_yaml("es.json", "es.yaml")
-translator.convert_yaml_to_json("es.yaml", "es.json")
+print(trans.home.title)  # Salida: Bienvenido
 ```
 
+### 2. Acceso por Clave (Método `get`)
 
-## Operación del servidor desde CLI
-> Requiere `toolstranslator[server]`
+Útil cuando la clave es dinámica o contiene caracteres especiales.
 
-```bash
-toolstranslator install
-toolstranslator doctor
-toolstranslator status
+```python
+print(trans.get("home.button")) # Salida: Entrar
 ```
 
-`install` y `doctor` muestran progreso y recomendaciones accionables en consola.
+## Cambio de Idioma
+
+Puedes cambiar el idioma activo en cualquier momento. Esto recargará las traducciones desde el archivo correspondiente.
+
+```python
+trans.change_lang("en")
+# O mediante la propiedad
+trans.lang = "fr"
+```
+
+## Manejo de Claves Faltantes
+
+Si `auto_add_missing_keys=True`, al acceder a una clave que no existe en el archivo de idioma actual, `Translator` la añadirá automáticamente con un valor por defecto ("TODO: agregar traducción").
+
+```python
+print(trans.new.key) # Escribe "new.key" en el archivo y devuelve el placeholder
+```
+
+Esto es muy útil durante el desarrollo para identificar rápidamente qué textos faltan por traducir.
+
+## Traducción en Tiempo Real (Proxy)
+
+Si tienes configurado un servidor de traducción (ver [CLI](cli.md)), puedes traducir textos al vuelo utilizando el método `translate`.
+
+```python
+translated_text = trans.translate("Hola mundo", source="es", target="en")
+print(translated_text) # Salida: Hello world
+```
+
+También puedes proporcionar una función de fallback en caso de que el servicio de traducción no esté disponible.
+
+```python
+translated = trans.translate(
+    "Hola mundo",
+    source="es",
+    target="en",
+    fallback=lambda text: f"[pending]{text}",
+)
+```
