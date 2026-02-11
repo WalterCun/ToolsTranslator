@@ -13,25 +13,25 @@ Librería Python publicable en PyPI para:
 ### Básica (modo proxy)
 
 ```bash
-pip install toolstranslator
+pip install translator
 ```
 
 ### Extra YAML
 
 ```bash
-pip install toolstranslator[yml]
+pip install translator[yml]
 ```
 
 ### Extra Server (CLI)
 
 ```bash
-pip install toolstranslator[server]
+pip install translator[server]
 ```
 
 ## API principal
 
 ```python
-from toolstranslator import Translator
+from translator import Translator
 
 trans = Translator(
     lang="es",
@@ -104,11 +104,11 @@ trans.generate_language_file(
 ## CLI (extra `server`)
 
 ```bash
-toolstranslator install
-toolstranslator doctor
-toolstranslator status
-toolstranslator restart
-toolstranslator clean-server
+translator install
+translator doctor
+translator status
+translator restart
+translator clean-server
 ```
 
 - `install`: prepara el servidor paso a paso con feedback completo.
