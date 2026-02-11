@@ -51,7 +51,7 @@ class Translator:
         self.client = LibreTranslateClient(base_url=base_url or settings.base_url, timeout=timeout or settings.timeout)
 
         self._lang = lang or settings.default_target_lang
-        self.fallback_lang = fallback_lang
+        self.fallback_lang = fallback_lang or lang or settings.default_target_lang
         self._auto_add_missing_keys = auto_add_missing_keys
         self.missing_key_behavior = missing_key_behavior or settings.missing_key_behavior
         self.missing_value_template = missing_value_template

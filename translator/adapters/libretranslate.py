@@ -15,7 +15,7 @@ class TranslationAdapter(Protocol):
         ...
 
 
-class LibreTranslateAdapter:
+class LibreTranslateClient:
     """HTTP adapter for LibreTranslate API."""
 
     def __init__(self, base_url: str, timeout: float = 10.0, client: HttpClient | None = None) -> None:

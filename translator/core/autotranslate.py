@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from translator.adapters.libretranslate_adapter import TranslationAdapter, LibreTranslateAdapter
+from translator.adapters.libretranslate import TranslationAdapter, LibreTranslateClient
 from translator.exceptions import LanguageDetectionError, ServerDependencyMissingError
 from translator.handlers.io_handlers import flatten, read_mapping, unflatten, write_mapping
 from translator.utils.fileinfo import TranslateFile
@@ -66,7 +66,7 @@ class AutoTranslate:
                 "AutoTranslate requires a translation adapter when server mode is disabled. "
                 "Provide `adapter=...` or enable server mode with `use_server=True`."
             )
-        return LibreTranslateAdapter()
+        return LibreTranslateClient()
 
     def worker(self) -> AutoTranslateResult:
         source_lang = self._detect_source_lang()
