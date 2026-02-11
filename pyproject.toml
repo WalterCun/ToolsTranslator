@@ -23,7 +23,9 @@ classifiers = [
   "Topic :: Software Development :: Internationalization",
 ]
 keywords = ["translate", "i18n", "libretranslate", "sdk"]
-dependencies = []
+dependencies = [
+    "typer>=0.21.2",
+]
 
 [project.optional-dependencies]
 yml = [
