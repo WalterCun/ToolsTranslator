@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import typer
 
-from translator.managers.manager import CheckResult, DockerManager
+
 from translator.exceptions import ExtraNotInstalledError
+from translator.managers.docker_manager import CheckResult, DockerManager
 
 app = typer.Typer(help="ToolsTranslator CLI")
 
