@@ -1,47 +1,45 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "translation-tools"
-version = "0.1.13"
-description = "Una librería de soporte para traducir archivos i18n."
+name = "toolstranslator"
+version = "0.2.0"
+description = "SDK modular para traducción con LibreTranslate y gestión de archivos i18n."
 readme = "README.md"
 authors = [{ name = "Walter Cun Bustamante", email = "waltercunbustamante@gmail.com" }]
-license = "MIT"
+license = { text = "MIT" }
 requires-python = ">=3.10"
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "Operating System :: OS Independent", 
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Topic :: Software Development :: Libraries",
-    "Topic :: Software Development :: Internationalization",
-    "Topic :: Utilities",
-    "Topic :: Text Processing :: Linguistic",
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Software Development :: Internationalization",
 ]
-dependencies = [
-    "colorlog>=6.7.0",
-    "requests>=2.32.3", 
-    "requests-cache>=1.2.1",
-    "pydantic-settings>=2.8.0",
-]
-keywords = ["translate", "i18n", "automation"]
+keywords = ["translate", "i18n", "libretranslate", "sdk"]
+dependencies = []
 
 [project.optional-dependencies]
-dev = [
-    "pytest",
-    "black",
-    "flake8", 
-    "build>=1.2.2.post1",
-    "twine",
-]
 yml = [
-    "pyyaml>=6.0.2",
+  "PyYAML>=6.0.2",
 ]
+server = [
+  "typer>=0.12.3",
+]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "ruff>=0.6.0",
+]
+
+[project.scripts]
+toolstranslator = "toolstranslator.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/WalterCun/ToolsTranslator"
@@ -50,5 +48,9 @@ Repository = "https://github.com/WalterCun/ToolsTranslator"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["translator*"]
+include = ["toolstranslator*"]
 exclude = ["tests*", "docs*", "examples*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+addopts = "-q"
