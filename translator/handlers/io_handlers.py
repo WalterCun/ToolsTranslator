@@ -1,43 +1,26 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
-from translator.exceptions import ServerDependencyMissingError
+from translator.handlers.json_handler import JsonHandler
+from translator.handlers.yaml_handler import YamlHandler
 
 
 def read_mapping(path: Path) -> dict[str, Any]:
     if path.suffix.lower() == ".json":
-        with path.open("r", encoding="utf-8") as f:
-            return json.load(f)
+        return JsonHandler.read(path)
     if path.suffix.lower() in {".yaml", ".yml"}:
-        try:
-            import yaml  # type: ignore
-        except ImportError as exc:
-            raise ServerDependencyMissingError(
-                "YAML requires optional dependency. Install with: pip install toolstranslator[yml]"
-            ) from exc
-        with path.open("r", encoding="utf-8") as f:
-            return yaml.safe_load(f) or {}
+        return YamlHandler.read(path)
     raise ValueError(f"Unsupported file format: {path.suffix}")
 
 
 def write_mapping(path: Path, data: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
     if path.suffix.lower() == ".json":
-        with path.open("w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        JsonHandler.write(path, data)
         return
     if path.suffix.lower() in {".yaml", ".yml"}:
-        try:
-            import yaml  # type: ignore
-        except ImportError as exc:
-            raise ServerDependencyMissingError(
-                "YAML requires optional dependency. Install with: pip install toolstranslator[yml]"
-            ) from exc
-        with path.open("w", encoding="utf-8") as f:
-            yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
+        YamlHandler.write(path, data)
         return
     raise ValueError(f"Unsupported file format: {path.suffix}")
 

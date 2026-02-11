@@ -18,9 +18,15 @@ class JsonHandler:
     @staticmethod
     def write(path: Path, data: dict[str, Any]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False, dir=path.parent) as tmp:
+        # Create temp file in the same directory to ensure atomic move works across filesystems
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False, dir=path.parent, suffix=".tmp") as tmp:
             json.dump(data, tmp, ensure_ascii=False, indent=2)
             tmp.flush()
             os.fsync(tmp.fileno())
             tmp_path = Path(tmp.name)
-        tmp_path.replace(path)
+        
+        try:
+            tmp_path.replace(path)
+        except OSError:
+            os.remove(tmp_path)
+            raise
