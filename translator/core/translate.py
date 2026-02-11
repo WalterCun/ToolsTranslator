@@ -9,7 +9,6 @@ import logging
 from pathlib import Path
 from typing import Dict, Union, Optional, Literal, Tuple
 
-from translator.config import settings
 from translator.api.translate_api import LibreTranslate
 
 
@@ -541,6 +540,7 @@ class Translator:
 
         # Siempre devolver un proxy que maneje la lógica
         return AuxiliarTranslationProxy(self, key)
+
 
 # if __name__ == '__main__':
 #     trans = Translator()
