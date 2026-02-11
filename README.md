@@ -1,148 +1,106 @@
-# translation-tools
+# ToolsTranslator
 
-[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
+Librería Python publicable en PyPI para:
 
-Librería y CLI para traducir archivos i18n y gestionar traducciones locales utilizando un servicio LibreTranslate.
-
-- Requiere Python 3.10+
-- Recomendado tener LibreTranslate disponible en http://localhost:5000 (ver docs/HOWTO_DOCKER.md)
-
-## Características
-
-- Librería y CLI para gestionar traducciones por idioma en archivos JSON.
-- Integración con LibreTranslate (http://localhost:5000 por defecto) con cache y reintentos.
-- Detección automática de idioma base al traducir archivos.
-- Soporte de formatos para AutoTranslate: JSON; YAML/YML en desarrollo (instalar el extra `yml` para parseo).
-- Utilidades para i18n.ts (TypeScript) de forma experimental (ver translator/parses/tts.py).
-- Herramientas para validar/levantar el servicio con Docker cuando es posible.
-
-## Requisitos
-
-- Python 3.10 o superior.
-- Servicio LibreTranslate accesible en http://localhost:5000.
-  - Si no tienes uno, revisa docs/HOWTO_DOCKER.md para iniciarlo automáticamente vía Docker.
+- Proxy de traducción contra LibreTranslate.
+- Gestión de archivos de idioma (`.json`) con soporte opcional YAML.
+- Generación automática de archivos de idioma desde un idioma base.
+- CLI opcional para instalar/diagnosticar LibreTranslate en Docker.
 
 ## Instalación
 
-```powershell
-pip install translation-tools
-# Soporte YAML (opcional)
-pip install "translation-tools[yml]"
+### Básica (modo proxy)
+
+```bash
+pip install toolstranslator
 ```
 
-## Formatos soportados
+Incluye solo SDK base (proxy HTTP + utilidades JSON).
 
-- JSON: Soportado plenamente para librería y AutoTranslate.
-- YAML/YML: Requiere instalar el extra `yml` (pyyaml).
-- TypeScript (i18n.ts): utilidades de parseo disponibles, AutoTranslate aún no soporta TS directamente.
+### Extra YAML
 
-## Uso rápido (librería)
+```bash
+pip install toolstranslator[yml]
+```
+
+Habilita lectura/escritura YAML y conversiones JSON↔YAML.
+
+### Extra Server
+
+```bash
+pip install toolstranslator[server]
+```
+
+Habilita comandos CLI:
+
+- `toolstranslator install`
+- `toolstranslator doctor`
+
+## Uso como proxy
 
 ```python
-from pathlib import Path
-from translator import Translator
+from toolstranslator import Translator
 
-langs_dir = Path("./langs")
-tr = Translator(translations_dir=langs_dir, default_lang="en")
-
-# Agrega una traducción al archivo de español
-tr.add_trans(key="greeting", lang="es", value="Hola mundo")
-
-# Cambia el idioma activo y lee la clave como atributo
-tr.lang = "es"
-print(tr.greeting)  # Si no existe, se guardará "No implement Translation" y se devolverá ese texto
+t = Translator()
+print(t.translate("Hola mundo", source="es", target="en"))
 ```
 
-### Uso avanzado (librería)
+### Fallback cuando no está LibreTranslate
 
 ```python
-from pathlib import Path
-from translator import Translator
+from toolstranslator import Translator
 
-# Inicializar el traductor
-tr = Translator(translations_dir=Path("./langs"), default_lang="en")
-
-# Cambiar dinámicamente el idioma
-tr.lang = "fr"
-print(tr.greeting)
-
-# Idiomas soportados por el servicio
-print(tr.api.get_supported_languages("en", to_list=True))
+t = Translator()
+translated = t.translate(
+    "Hola mundo",
+    source="es",
+    target="en",
+    fallback=lambda text: f"[pending]{text}"
+)
 ```
 
-## AutoTranslate (librería)
-
-Traduce un archivo base (JSON/YAML) a otros idiomas.
+## Uso con archivos
 
 ```python
-from pathlib import Path
-from translator.core.autotranslate import AutoTranslate
-from translator.utils import TranslateFile
+from toolstranslator import Translator
 
-src = Path("./struct_files/en.json")
-info = TranslateFile(src)
-auto = AutoTranslate(info)
-# Traduce a los idiomas soportados (o configura idiomas en el CLI)
-auto.worker()
+translator = Translator(directory="./locales")
+value = translator.get("home.title", lang="es")  # si no existe devuelve la clave
 ```
 
-## Uso rápido (CLI)
+## Generación de idiomas
 
-- Versión
-```powershell
-python -m translator --version
+```python
+from toolstranslator import Translator
+
+Translator().generate_language_file(
+    base_file="./locales/es.json",
+    target_lang="en",
+    output="./locales/en.json",
+    source_lang="es",
+    mark_pending=True,
+)
 ```
 
-- Agregar una traducción
-```powershell
-# Crear o actualizar ./langs/es.json con una nueva clave
-python -m translator add .\langs\es.json --key greeting --lang es "Hola mundo"
+## CLI
+
+```bash
+toolstranslator install
+toolstranslator doctor
 ```
 
-- Traducción automática de archivos
-```powershell
-# Traducir un archivo base a varios idiomas
-python -m translator auto-translate .\struct_files\en.json --langs es fr
+## Integración en otros proyectos
 
-# Directorio de salida y sobreescritura
-python -m translator auto-translate .\struct_files\en.json --langs es fr --output .\struct_files\output --overwrite
+También puede instalarse desde Git:
+
+```bash
+pip install git+https://github.com/usuario/toolstranslator
 ```
-
-Parámetros principales de auto-translate:
-- --base: Idioma base si no se detecta desde el nombre del archivo.
-- --langs: Idiomas destino (ej. es en fr). Acepta múltiples valores o "all".
-- --output: Directorio donde escribir las salidas JSON.
-- --force: Forzar traducciones aunque ya existan.
-- --overwrite: Incluir el idioma base cuando se usa "all" y sobreescribir salidas.
-
-## Servicio LibreTranslate y Docker
-
-- Por defecto se usa http://localhost:5000. La herramienta intentará validar e iniciar un contenedor "libretranslate" usando Docker cuando sea posible.
-- En entornos no interactivos (CI) o sin Docker, asegúrate de tener el servicio corriendo previamente.
-- Más detalles en [docs/HOWTO_DOCKER.md](docs/HOWTO_DOCKER.md).
 
 ## Documentación
 
-- Guía de uso: [docs/USAGE.md](docs/USAGE.md)
-- Referencia de API: [docs/API_REFERENCE.md](docs/API_REFERENCE.md)
-- LibreTranslate + Docker: [docs/HOWTO_DOCKER.md](docs/HOWTO_DOCKER.md)
-- Desarrollo/Instalación: [docs/INSTALL_DEV.md](docs/INSTALL_DEV.md)
-- Arquitectura: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-
-## Ejemplos ejecutables
-
-- examples/simple_translator.py
-- examples/auto_translate_file.py
-- examples/check_service.py
-
-## Contribuir
-
-Las contribuciones son bienvenidas. Revisa [CONTRIBUTING.md](CONTRIBUTING.md) para más detalles.
-
-## Soporte y issues
-
-Reporta problemas o solicita mejoras en: https://github.com/WalterCun/ToolsTranslator/issues
-
-## Licencia
-
-Este proyecto está disponible bajo la [Licencia MIT](LICENSE).
+- `docs/architecture.md`
+- `docs/installation.md`
+- `docs/usage.md`
+- `docs/cli.md`
+- `docs/extensibility.md`

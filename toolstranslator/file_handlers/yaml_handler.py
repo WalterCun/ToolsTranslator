@@ -1,0 +1,33 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from toolstranslator.exceptions import ExtraNotInstalledError
+
+
+class YamlHandler:
+    """YAML utility loaded only when `yml` extra is installed."""
+
+    @staticmethod
+    def _load_yaml_module() -> Any:
+        try:
+            import yaml  # type: ignore
+        except ImportError as exc:  # pragma: no cover - depends on installation mode
+            raise ExtraNotInstalledError(
+                "YAML support requires optional dependency. Install: pip install toolstranslator[yml]"
+            ) from exc
+        return yaml
+
+    @classmethod
+    def read(cls, path: Path) -> dict[str, Any]:
+        yaml = cls._load_yaml_module()
+        with path.open("r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+
+    @classmethod
+    def write(cls, path: Path, data: dict[str, Any]) -> None:
+        yaml = cls._load_yaml_module()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8") as f:
+            yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
