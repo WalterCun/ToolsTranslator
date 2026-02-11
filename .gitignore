@@ -171,6 +171,6 @@ cython_debug/
 .pypirc
 /tools/LibreTranslate/
 /uv.lock
-/translator/tools/LibreTranslate/
+/bk/tools/LibreTranslate/
 /struct_files/
 /translate_cache.sqlite
