@@ -8,8 +8,8 @@ from typing import Any, Callable
 from translator.adapters.libretranslate import LibreTranslateClient
 from translator.config import settings
 from translator.exceptions import LanguageNotAvailableError, TranslationFileError
-from translator.file_handlers.json_handler import JsonHandler
-from translator.file_handlers.yaml_handler import YamlHandler
+from translator.handlers.json_handler import JsonHandler
+from translator.handlers.yaml_handler import YamlHandler
 
 
 class TranslationProxy:

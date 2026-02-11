@@ -4,10 +4,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from translate.adapter import LibreTranslateAdapter, TranslationAdapter
-from translate.exceptions import LanguageDetectionError, ServerDependencyMissingError
-from translate.fileinfo import TranslateFile
-from translate.io_handlers import flatten, read_mapping, unflatten, write_mapping
+from translator.adapters.libretranslate_adapter import TranslationAdapter, LibreTranslateAdapter
+from translator.exceptions import LanguageDetectionError, ServerDependencyMissingError
+from translator.handlers.io_handlers import flatten, read_mapping, unflatten, write_mapping
+from translator.utils.fileinfo import TranslateFile
 
 
 @dataclass(slots=True)
@@ -37,11 +37,11 @@ class AutoTranslate:
     """
 
     def __init__(
-        self,
-        translate_file: TranslateFile,
-        args: AutoTranslateOptions,
-        adapter: TranslationAdapter | None = None,
-        use_server: bool = False,
+            self,
+            translate_file: TranslateFile,
+            args: AutoTranslateOptions,
+            adapter: TranslationAdapter | None = None,
+            use_server: bool = False,
     ) -> None:
         self.translate_file = translate_file
         self.args = args
@@ -120,11 +120,11 @@ class AutoTranslate:
 
     @classmethod
     def cli_worker(
-        cls,
-        translate_file: TranslateFile,
-        args: AutoTranslateOptions,
-        use_server: bool,
-        adapter: TranslationAdapter | None = None,
+            cls,
+            translate_file: TranslateFile,
+            args: AutoTranslateOptions,
+            use_server: bool,
+            adapter: TranslationAdapter | None = None,
     ) -> tuple[int, str]:
         """Helper for CLI integration with controlled messages and exit code."""
         try:

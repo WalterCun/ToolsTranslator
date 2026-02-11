@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from translate.exceptions import ServerDependencyMissingError
+from translator.exceptions import ServerDependencyMissingError
 
 
 def read_mapping(path: Path) -> dict[str, Any]:

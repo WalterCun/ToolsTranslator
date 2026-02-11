@@ -6,7 +6,7 @@ from typing import Protocol
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from translate.exceptions import ServerDependencyMissingError
+from translator.exceptions import ServerDependencyMissingError
 
 
 class TranslationAdapter(Protocol):
