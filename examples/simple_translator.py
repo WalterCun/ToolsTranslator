@@ -14,7 +14,7 @@ import requests
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.append(str(ROOT))
 
-from translator import Translator  # noqa: E402
+from bk import Translator  # noqa: E402
 
 
 def service_available(url: str = "http://localhost:5000") -> bool:

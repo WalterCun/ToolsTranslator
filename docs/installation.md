@@ -5,17 +5,17 @@
 
 ## Base
 ```bash
-pip install toolstranslator
+pip install translator
 ```
 
 ## Con YAML
 ```bash
-pip install toolstranslator[yml]
+pip install translator[yml]
 ```
 
 ## Con Server/CLI
 ```bash
-pip install toolstranslator[server]
+pip install translator[server]
 ```
 
 ## Desde repositorio Git

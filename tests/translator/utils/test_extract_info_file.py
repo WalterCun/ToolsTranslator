@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from translator.utils.extract_info_file import TranslateFile
+from bk.utils.extract_info_file import TranslateFile
 
 
 def test_extract_lang_info_from_filename():

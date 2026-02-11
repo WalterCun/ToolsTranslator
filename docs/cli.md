@@ -6,12 +6,12 @@
 Levanta/crea el contenedor de LibreTranslate si no está corriendo.
 
 ```bash
-toolstranslator install
+translator install
 ```
 
 ## Doctor
 Muestra diagnósticos de Docker y contenedor.
 
 ```bash
-toolstranslator doctor
+translator doctor
 ```

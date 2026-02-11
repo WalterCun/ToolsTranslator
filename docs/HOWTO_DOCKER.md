@@ -12,7 +12,7 @@ Opciones recomendadas
 1) Usar el helper de validación (interactivo)
 
 ```python
-from translator.tools.verify_docker_tool import validator_docker_container
+from bk.tools.verify_docker_tool import validator_docker_container
 
 # Verifica si Docker está instalado y corriendo; si no, preguntará para instalar/iniciar.
 # Luego intentará asegurar un contenedor de LibreTranslate en ejecución.
@@ -22,7 +22,7 @@ validator_docker_container()
 2) Gestionar directamente LibreTranslate con Docker (programático)
 
 ```python
-from translator.tools.docker_tool import manage_libretranslate, get_libretranslate_status, is_docker_installed, is_docker_running
+from bk.tools.docker_tool import manage_libretranslate, get_libretranslate_status, is_docker_installed, is_docker_running
 
 print("Docker instalado:", is_docker_installed())
 print("Docker en ejecución:", is_docker_running())

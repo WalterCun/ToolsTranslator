@@ -31,7 +31,7 @@ pip install git+https://github.com/WalterCun/ToolsTranslator.git
 El comando básico para usar la librería en la consola tiene la forma:
 
 ```bash
-python -m translator auto-translate [--base] [language_base] [ruta_al_archivo] [opciones]
+python -m bk auto-translate [--base] [language_base] [ruta_al_archivo] [opciones]
 ```
 
 ### Descripción de Argumentos y Opciones
@@ -61,7 +61,7 @@ A continuación se presentan diferentes casos prácticos de cómo ejecutar la li
 ### 1. Traducir un archivo JSON al idioma español
 
 ```bash
-python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --lang es
+python -m bk auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --lang es
 ```
 
 **Explicación:**
@@ -74,7 +74,7 @@ python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.js
 ### 2. Traducir un archivo JSON a todos los idiomas disponibles
 
 ```bash
-python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --lang all
+python -m bk auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --lang all
 ```
 
 **Explicación:**
@@ -87,7 +87,7 @@ python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.js
 ### 3. Traducir un archivo YAML al idioma portugués (brasileño)
 
 ```bash
-python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.yml --lang br
+python -m bk auto-translate D:\Coders\ToolsTranslator\struct_files\en.yml --lang br
 ```
 
 **Explicación:**
@@ -99,7 +99,7 @@ python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.ym
 ### 4. Traducir y guardar el resultado en un directorio específico
 
 ```bash
-python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --lang all --output D:\Coders\ToolsTranslator\struct_files\output
+python -m bk auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --lang all --output D:\Coders\ToolsTranslator\struct_files\output
 ```
 
 **Explicación:**
@@ -112,7 +112,7 @@ python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.js
 ### 5. Sobrescribir archivos existentes durante la traducción
 
 ```bash
-python -m translator auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --lang es --output D:\Coders\ToolsTranslator\struct_files\output --overwrite
+python -m bk auto-translate D:\Coders\ToolsTranslator\struct_files\en.json --lang es --output D:\Coders\ToolsTranslator\struct_files\output --overwrite
 ```
 
 **Explicación:**
@@ -135,7 +135,7 @@ terminal. Asegúrate de ejecutar el comando desde el directorio donde se encuent
 Asegúrate de que la ruta que has ingresado al archivo JSON o YAML es correcta. Por ejemplo:
 
 ```bash
-python -m translator auto-translate "D:\ruta_correcta\a_los_archivos\archivo.json" --lang en
+python -m bk auto-translate "D:\ruta_correcta\a_los_archivos\archivo.json" --lang en
 ```
 
 ---
@@ -145,7 +145,7 @@ python -m translator auto-translate "D:\ruta_correcta\a_los_archivos\archivo.jso
 Puedes usar la siguiente opción para obtener ayuda sobre cómo usar el CLI:
 
 ```bash
-python -m translator --help
+python -m bk --help
 ```
 
 Esto proporcionará una lista de los comandos y opciones disponibles.
@@ -160,7 +160,7 @@ Puedes integrar este CLI en scripts bash o workflows para traducir múltiples ar
 
 ```bash
 for archivo in ./archivos_a_traducir/*.json; do
-    python -m translator auto-translate "$archivo" --lang all --output ./output --overwrite
+    python -m bk auto-translate "$archivo" --lang all --output ./output --overwrite
 done
 ```
 
