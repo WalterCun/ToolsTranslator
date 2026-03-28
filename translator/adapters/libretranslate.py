@@ -1,19 +1,11 @@
 from __future__ import annotations
 
 import time
-from typing import Protocol
 from urllib.error import HTTPError, URLError
 
+from translator.adapters.base import TranslationAdapter  # noqa: F401 — re-export
 from translator.adapters.http_client import HttpClient
 from translator.exceptions import ServiceUnavailableError, ServerDependencyMissingError
-
-
-class TranslationAdapter(Protocol):
-    def available(self) -> tuple[bool, str]:
-        ...
-
-    def translate(self, text: str, source: str, target: str) -> str:
-        ...
 
 
 class LibreTranslateClient:

@@ -5,6 +5,7 @@ import threading
 from pathlib import Path
 from typing import Any, Callable
 
+from translator.adapters.base import TranslationAdapter
 from translator.adapters.libretranslate import LibreTranslateClient
 from translator.config import settings
 from translator.exceptions import LanguageNotAvailableError, TranslationFileError
@@ -45,11 +46,19 @@ class Translator:
         auto_add_missing_keys: bool = False,
         fallback_lang: str | None = None,
         missing_value_template: str = DEFAULT_MISSING_TEXT,
+        adapter: TranslationAdapter | None = None,
     ) -> None:
         self.directory = Path(directory) if directory else settings.locale_dir
         self.directory.mkdir(parents=True, exist_ok=True)
         self.log = logging.getLogger("translator")
-        self.client = LibreTranslateClient(base_url=base_url or settings.base_url, timeout=timeout or settings.timeout)
+
+        if adapter is not None:
+            self.client: TranslationAdapter = adapter
+        else:
+            self.client = LibreTranslateClient(
+                base_url=base_url or settings.base_url,
+                timeout=timeout or settings.timeout,
+            )
 
         self._lang = lang or settings.default_target_lang
         self.fallback_lang = fallback_lang or lang or settings.default_target_lang

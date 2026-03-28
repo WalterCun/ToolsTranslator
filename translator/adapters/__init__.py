@@ -1,3 +1,6 @@
-from translator.adapters.libretranslate import TranslationAdapter
+"""Translation adapters — pluggable backends for translation services."""
 
-__all__ = ["TranslationAdapter"]
+from translator.adapters.base import TranslationAdapter
+from translator.adapters.libretranslate import LibreTranslateClient
+
+__all__ = ["TranslationAdapter", "LibreTranslateClient"]
