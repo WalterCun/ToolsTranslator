@@ -25,7 +25,15 @@ class TranslationProxy:
         return self._translator._resolve_attr(self._parts + [item])
 
     def __str__(self) -> str:
-        return self._translator.get(".".join(self._parts))
+        key = ".".join(self._parts)
+        data = self._translator._current_data
+        value = self._translator._deep_get(data, key)
+        if isinstance(value, dict):
+            # Return the key itself for dict nodes (avoids recursion)
+            return key
+        if value is not None:
+            return str(self._translator._resolve_dynamic_value(value, self._translator._lang, None))
+        return key
 
     def __repr__(self) -> str:
         return str(self)
@@ -61,7 +69,11 @@ class Translator:
             )
 
         self._lang = lang or settings.default_target_lang
-        self.fallback_lang = fallback_lang or lang or settings.default_target_lang
+        # fallback_lang: None = auto (defaults to lang), "" = disabled, "xx" = explicit
+        if fallback_lang is None:
+            self.fallback_lang: str = self._lang
+        else:
+            self.fallback_lang = fallback_lang
         self._auto_add_missing_keys = auto_add_missing_keys
         self.missing_key_behavior = missing_key_behavior or settings.missing_key_behavior
         self.missing_value_template = missing_value_template
@@ -146,7 +158,11 @@ class Translator:
             else:
                 value = self._missing_value(key, default)
         elif isinstance(value, dict):
-            return str(TranslationProxy(self, key.split(".")))
+            # Dynamic translation blocks should be resolved, not navigated
+            if "__translate__" in value:
+                value = self._resolve_dynamic_value(value, use_lang, remote_target_lang)
+            else:
+                return str(TranslationProxy(self, key.split(".")))
         else:
             value = self._resolve_dynamic_value(value, use_lang, remote_target_lang)
 
@@ -229,10 +245,10 @@ class Translator:
             return self._lang_cache[lang]
 
         data = self._read_lang_file(lang)
-        if not data:
+        if data is None:
             if self.fallback_lang:
                 fallback_data = self._read_lang_file(self.fallback_lang)
-                if fallback_data:
+                if fallback_data is not None:
                     self.log.warning("Language '%s' not found. Using fallback '%s'.", lang, self.fallback_lang)
                     self._lang_cache[lang] = fallback_data
                     return fallback_data
@@ -240,11 +256,12 @@ class Translator:
                 raise LanguageNotAvailableError(
                     f"Language '{lang}' not found in {self.directory}. Available: {', '.join(self.available_languages())}"
                 )
+            return {}
 
         self._lang_cache[lang] = data
         return data
 
-    def _read_lang_file(self, lang: str) -> dict[str, Any]:
+    def _read_lang_file(self, lang: str) -> dict[str, Any] | None:
         json_path = self.directory / f"{lang}.json"
         if json_path.exists():
             return JsonHandler.read(json_path)
@@ -257,7 +274,7 @@ class Translator:
         if yml_path.exists():
             return YamlHandler.read(yml_path)
 
-        return {}
+        return None
 
     def _write_lang_file(self, lang: str, data: dict[str, Any]) -> None:
         json_path = self.directory / f"{lang}.json"

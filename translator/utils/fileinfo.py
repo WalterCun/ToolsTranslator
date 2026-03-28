@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-# Pattern for valid language codes: "es", "en", "pt", "zh", "pt_BR", "zh_Hans"
-_LANG_CODE_RE = re.compile(r"^[a-z]{2}(_[A-Z]{2,4})?$")
+# Pattern for valid language codes: "es", "en", "pt_BR", "zh_Hans", "zh_Hans_CN"
+_LANG_CODE_RE = re.compile(r"^[a-z]{2}(_[A-Za-z]{2,4})?(_[A-Za-z]{2,4})?$")
 
 
 @dataclass(slots=True)

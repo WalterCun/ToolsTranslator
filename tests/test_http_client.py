@@ -47,7 +47,7 @@ class TestHttpClientRetry:
 
         client = HttpClient(retries=3, base_delay=0.01)
         resp = client.get("http://example.com")
-        assert resp.json() == {"ok": true}
+        assert resp.json() == {"ok": True}
         assert mock_urlopen.call_count == 3
 
     @patch("translator.adapters.http_client.urlopen")
@@ -102,7 +102,7 @@ class TestHttpClientRetry:
 
         client = HttpClient(retries=3, base_delay=0.01)
         resp = client.get("http://example.com")
-        assert resp.json() == {"ok": true}
+        assert resp.json() == {"ok": True}
 
     @patch("translator.adapters.http_client.urlopen")
     def test_all_retries_exhausted(self, mock_urlopen: MagicMock) -> None:

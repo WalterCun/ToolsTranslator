@@ -38,9 +38,9 @@ def test_language_switch_missing_file(tmp_path):
     with open(locale_dir / "en.json", "w", encoding="utf-8") as f:
         f.write('{"greeting": "Hello"}')
     
-    t = Translator(lang="en", directory=locale_dir)
+    # Pass fallback_lang="" to disable fallback behavior
+    t = Translator(lang="en", directory=locale_dir, fallback_lang="")
     
-    # Try to switch to a non-existent language
-    # This should raise LanguageNotAvailableError
+    # Try to switch to a non-existent language without fallback
     with pytest.raises(LanguageNotAvailableError):
         t.change_lang("fr")
