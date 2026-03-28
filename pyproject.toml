@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "toolstranslator"
-version = "0.2.0"
+version = "1.0.0"
 description = "SDK modular para traducción con LibreTranslate y gestión de archivos i18n."
 readme = "README.md"
 authors = [{ name = "Walter Cun Bustamante", email = "waltercunbustamante@gmail.com" }]
 license = { text = "MIT" }
 requires-python = ">=3.10"
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",

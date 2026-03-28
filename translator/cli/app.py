@@ -148,6 +148,19 @@ def restart() -> None:
     raise typer.Exit(code=1)
 
 
+@app.command()
+def stop() -> None:
+    """Stop LibreTranslate container without removing it."""
+    _ensure_server_extra()
+    manager = DockerManager()
+    ok, message = manager.stop_container()
+    if ok:
+        typer.secho(f"✔ {message}", fg=typer.colors.GREEN)
+        raise typer.Exit(code=0)
+    typer.secho(f"✖ {message}", fg=typer.colors.RED)
+    raise typer.Exit(code=1)
+
+
 @app.command("clean-server")
 def clean_server() -> None:
     """Remove LibreTranslate container (image is preserved)."""
@@ -159,3 +172,19 @@ def clean_server() -> None:
         raise typer.Exit(code=0)
     typer.secho(f"✖ {message}", fg=typer.colors.RED)
     raise typer.Exit(code=1)
+
+
+@app.command()
+def translate(text: str = typer.Argument(..., help="Text to translate"),
+              source: str = typer.Option("auto", "--source", "-s", help="Source language"),
+              target: str = typer.Option("en", "--target", "-t", help="Target language"),
+              url: str = typer.Option(None, "--url", "-u", help="LibreTranslate URL")):
+    """Quick translation from CLI."""
+    from translator.adapters.libretranslate import LibreTranslateClient
+    client = LibreTranslateClient(base_url=url or "http://localhost:5000")
+    ok, reason = client.available()
+    if not ok:
+        typer.secho(f"✖ Service unavailable: {reason}", fg=typer.colors.RED)
+        raise typer.Exit(1)
+    result = client.translate(text, source=source, target=target)
+    typer.echo(result)

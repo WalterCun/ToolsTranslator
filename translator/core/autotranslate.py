@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -92,15 +93,27 @@ class AutoTranslate:
             else:
                 flat_target = {}
 
+            # Collect keys that need translation
+            to_translate: dict[str, str] = {}
             for key, value in flat_source.items():
                 if key in flat_target and not self.args.force:
                     continue
-                try:
-                    flat_target[key] = adapter.translate(value, source=source_lang, target=target_lang)
-                    translated_keys += 1
-                except ServerDependencyMissingError:
-                    failed_keys += 1
-                    flat_target[key] = value
+                to_translate[key] = value
+
+            if to_translate:
+                with ThreadPoolExecutor(max_workers=4) as executor:
+                    futures = {}
+                    for key, value in to_translate.items():
+                        future = executor.submit(adapter.translate, value, source=source_lang, target=target_lang)
+                        futures[future] = key
+                    for future in as_completed(futures):
+                        key = futures[future]
+                        try:
+                            flat_target[key] = future.result()
+                            translated_keys += 1
+                        except Exception:
+                            failed_keys += 1
+                            flat_target[key] = flat_source[key]
 
             to_write: dict[str, Any]
             if self.args.nested:

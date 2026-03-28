@@ -17,6 +17,7 @@ class Settings:
     locale_dir: Path = Path(os.getenv("TOOLSTRANSLATOR_LOCALE_DIR", "./locales"))
     missing_key_behavior: str = os.getenv("TOOLSTRANSLATOR_MISSING_KEY", "key")
     log_level: str = os.getenv("TOOLSTRANSLATOR_LOG_LEVEL", "INFO")
+    debug: bool = os.getenv("TOOLSTRANSLATOR_DEBUG", "").lower() in ("1", "true", "yes")
 
 
 settings = Settings()
@@ -29,7 +30,8 @@ def _configure_logging() -> None:
         handler = logging.StreamHandler()
         handler.setFormatter(logging.Formatter("%(name)s %(levelname)s: %(message)s"))
         logger.addHandler(handler)
-    logger.setLevel(getattr(logging, settings.log_level.upper(), logging.INFO))
+    level = logging.DEBUG if settings.debug else getattr(logging, settings.log_level.upper(), logging.INFO)
+    logger.setLevel(level)
 
 
 _configure_logging()

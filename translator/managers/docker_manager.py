@@ -92,6 +92,13 @@ class DockerManager:
         cmd = self._run("restart", self.container_name)
         return cmd.returncode == 0, cmd.stdout.strip() or cmd.stderr.strip()
 
+    def stop_container(self) -> tuple[bool, str]:
+        """Stop container without removing it."""
+        if not self.container_running():
+            return True, "Container already stopped."
+        cmd = self._run("stop", self.container_name)
+        return cmd.returncode == 0, cmd.stdout.strip() or cmd.stderr.strip()
+
     def remove_container(self) -> tuple[bool, str]:
         if not self.container_exists():
             return True, "Container does not exist."

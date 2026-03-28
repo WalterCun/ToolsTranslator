@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import threading
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Callable
 
@@ -12,6 +13,34 @@ from translator.exceptions import LanguageNotAvailableError, TranslationFileErro
 from translator.handlers.io_handlers import flatten, read_mapping, unflatten, write_mapping
 from translator.handlers.json_handler import JsonHandler
 from translator.handlers.yaml_handler import YamlHandler
+
+
+class _LRUCache:
+    """Bounded LRU cache using OrderedDict. Evicts oldest entries when exceeding max_size."""
+
+    def __init__(self, max_size: int = 50) -> None:
+        self._max_size = max_size
+        self._data: OrderedDict[str, dict[str, Any]] = OrderedDict()
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._data
+
+    def __getitem__(self, key: str) -> dict[str, Any]:
+        self._data.move_to_end(key)
+        return self._data[key]
+
+    def __setitem__(self, key: str, value: dict[str, Any]) -> None:
+        if key in self._data:
+            self._data.move_to_end(key)
+        self._data[key] = value
+        while len(self._data) > self._max_size:
+            self._data.popitem(last=False)
+
+    def __delitem__(self, key: str) -> None:
+        del self._data[key]
+
+    def clear(self) -> None:
+        self._data.clear()
 
 
 class TranslationProxy:
@@ -79,9 +108,16 @@ class Translator:
         self.missing_value_template = missing_value_template
 
         self._file_lock = threading.RLock()
-        self._lang_cache: dict[str, dict[str, Any]] = {}
+        self._lang_cache: _LRUCache = _LRUCache(max_size=50)
         self._resolved_cache: dict[tuple[str, str], str] = {}
+        self._available_cache: list[str] | None = None
         self._current_data: dict[str, Any] = self._load_language(self._lang)
+        self._metrics: dict[str, int] = {
+            "get_calls": 0,
+            "translate_calls": 0,
+            "cache_hits": 0,
+            "missing_keys": 0,
+        }
 
     @property
     def lang(self) -> str:
@@ -99,14 +135,34 @@ class Translator:
     def auto_add_missing_keys(self, value: bool) -> None:
         self._auto_add_missing_keys = bool(value)
 
+    @property
+    def metrics(self) -> dict[str, int]:
+        return dict(self._metrics)
+
+    def __contains__(self, key: str) -> bool:
+        """Check if a translation key exists."""
+        return self._deep_get(self._current_data, key) is not None
+
+    def __iter__(self):
+        """Iterate over all translation keys (dotted notation)."""
+        return iter(self._flatten(self._current_data).keys())
+
+    def __len__(self) -> int:
+        """Count of translation keys."""
+        return len(self._flatten(self._current_data))
+
     def change_lang(self, lang: str) -> None:
         self._current_data = self._load_language(lang)
         old_lang = self._lang
         self._lang = lang
+        self._resolved_cache.clear()
         self.log.debug("Language changed: %s -> %s", old_lang, lang)
 
     def available_languages(self) -> list[str]:
-        langs = sorted({p.stem for p in self.directory.glob("*.json")} | {p.stem for p in self.directory.glob("*.yaml")})
+        if self._available_cache is not None:
+            return self._available_cache
+        langs = sorted({p.stem for p in self.directory.glob("*.json")} | {p.stem for p in self.directory.glob("*.yaml")} | {p.stem for p in self.directory.glob("*.yml")})
+        self._available_cache = langs
         return langs
 
     def _resolve_langs(self, source: str | None, target: str | None) -> tuple[str, str]:
@@ -123,6 +179,7 @@ class Translator:
         target: str | None = None,
         fallback: Callable[[str], str] | str | None = None,
     ) -> str:
+        self._metrics["translate_calls"] += 1
         source_lang, target_lang = self._resolve_langs(source, target)
         try:
             return self.client.translate(text=text, source=source_lang, target=target_lang)
@@ -144,14 +201,17 @@ class Translator:
         default: str | None = None,
         remote_target_lang: str | None = None,
     ) -> str:
+        self._metrics["get_calls"] += 1
         use_lang = lang or self._lang
         cache_key = (use_lang, key)
         if cache_key in self._resolved_cache and remote_target_lang is None:
+            self._metrics["cache_hits"] += 1
             return self._resolved_cache[cache_key]
 
         data = self._load_language(use_lang)
         value = self._deep_get(data, key)
         if value is None:
+            self._metrics["missing_keys"] += 1
             if self.auto_add_missing_keys and use_lang == self._lang:
                 self._add_missing_key(key)
                 value = self.missing_value_template
@@ -262,21 +322,15 @@ class Translator:
         return data
 
     def _read_lang_file(self, lang: str) -> dict[str, Any] | None:
-        json_path = self.directory / f"{lang}.json"
-        if json_path.exists():
-            return JsonHandler.read(json_path)
-
-        yaml_path = self.directory / f"{lang}.yaml"
-        if yaml_path.exists():
-            return YamlHandler.read(yaml_path)
-
-        yml_path = self.directory / f"{lang}.yml"
-        if yml_path.exists():
-            return YamlHandler.read(yml_path)
-
+        extensions = {".json": JsonHandler.read, ".yaml": YamlHandler.read, ".yml": YamlHandler.read}
+        for ext, handler in extensions.items():
+            path = self.directory / f"{lang}{ext}"
+            if path.exists():
+                return handler(path)
         return None
 
     def _write_lang_file(self, lang: str, data: dict[str, Any]) -> None:
+        self._available_cache = None
         json_path = self.directory / f"{lang}.json"
         yaml_path = self.directory / f"{lang}.yaml"
         yml_path = self.directory / f"{lang}.yml"
@@ -305,6 +359,7 @@ class Translator:
 
     def _add_missing_key(self, key: str) -> None:
         with self._file_lock:
+            self._available_cache = None
             current = self._read_lang_file(self._lang)
             if self._deep_get(current, key) is None:
                 self._deep_set(current, key, self.missing_value_template)
