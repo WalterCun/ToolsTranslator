@@ -1,67 +1,43 @@
-"""
-Example: Basic Usage of Translator
+"""Ejemplo básico — Uso mínimo de ToolsTranslator.
 
-This example demonstrates:
-1. Initializing the Translator with a specific language.
-2. Accessing translations using the `get` method.
-3. Accessing translations using attribute access (proxy).
-4. Handling nested keys.
+Este ejemplo muestra cómo inicializar el Translator y acceder
+a traducciones desde archivos JSON.
+
+Requisitos previos:
+    Crear locales/es.json con el siguiente contenido:
+    {
+        "app": {
+            "title": "Mi Aplicación",
+            "buttons": {
+                "save": "Guardar",
+                "cancel": "Cancelar"
+            }
+        },
+        "greeting": "¡Hola!"
+    }
 """
 
-import shutil
 from pathlib import Path
 from translator import Translator
 
-# Setup temporary locale directory for the example
-LOCALE_DIR = Path("locales")
-if LOCALE_DIR.exists():
-    shutil.rmtree(LOCALE_DIR)
-LOCALE_DIR.mkdir(parents=True, exist_ok=True)
+# 1. Inicializar el traductor
+trans = Translator(lang="es", directory=Path(__file__).parent / "locales")
 
-print(LOCALE_DIR.resolve())
+# 2. Acceso por atributos (recomendado)
+print(trans.app.title)           # "Mi Aplicación"
+print(trans.app.buttons.save)    # "Guardar"
+print(trans.greeting)            # "¡Hola!"
 
-# Create a sample language file (es.json)
-import json
-es_data = {
-    "hello": "Hola",
-    "welcome": "Bienvenido",
-    "user": {
-        "name": "Nombre",
-        "profile": {
-            "title": "Perfil de Usuario"
-        }
-    }
-}
-with open(LOCALE_DIR / "es.json", "w", encoding="utf-8") as f:
-    json.dump(es_data, f)
+# 3. Acceso por clave con puntos
+print(trans.get("app.title"))    # "Mi Aplicación"
+print(trans.get("app.buttons.cancel"))  # "Cancelar"
 
-def main():
-    print("--- Basic Usage Example ---")
+# 4. Cambiar idioma (si existe en.json)
+# trans.change_lang("en")
+# print(trans.app.title)  # "My Application"
 
-    # 1. Initialize Translator
-    # We specify the directory where our language files are located.
-    # We set the initial language to 'es' (Spanish).
-    t = Translator(lang="es", directory=LOCALE_DIR)
-    print(f"Translator initialized with language: {t.lang}")
+# 5. Listar idiomas disponibles
+print(f"Idiomas disponibles: {trans.available_languages()}")
 
-    # 2. Access using get()
-    hello = t.get("hello")
-    print(f"t.get('hello'): {hello}")  # Expected: Hola
-
-    # 3. Access using attributes (Proxy)
-    welcome = t.welcome
-    print(f"t.welcome: {welcome}")    # Expected: Bienvenido
-
-    # 4. Nested keys
-    user_name = t.user.name
-    print(f"t.user.name: {user_name}") # Expected: Nombre
-    
-    profile_title = t.get("user.profile.title")
-    print(f"t.get('user.profile.title'): {profile_title}") # Expected: Perfil de Usuario
-
-    # Cleanup
-    if LOCALE_DIR.exists():
-        shutil.rmtree(LOCALE_DIR)
-
-if __name__ == "__main__":
-    main()
+# 6. Clave con valor por defecto
+print(trans.get("missing.key", default="No encontrado"))  # "No encontrado"

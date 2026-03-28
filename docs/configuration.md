@@ -1,44 +1,111 @@
 # Configuración
 
-ToolsTranslator utiliza variables de entorno para configurar su comportamiento por defecto. Esto permite adaptar la librería a diferentes entornos (desarrollo, producción) sin modificar el código.
-
 ## Variables de Entorno
 
-Las siguientes variables pueden definirse en tu archivo `.env` o en el entorno del sistema:
+Todas las variables se leen al importar el módulo. Para cambiar valores en runtime, pasa los parámetros directamente al constructor.
 
-| Variable | Descripción | Valor por Defecto |
-| :--- | :--- | :--- |
-| `TOOLSTRANSLATOR_BASE_URL` | URL base del servidor LibreTranslate. | `http://localhost:5000` |
-| `TOOLSTRANSLATOR_TIMEOUT` | Tiempo de espera (en segundos) para las peticiones HTTP. | `10` |
-| `TOOLSTRANSLATOR_SOURCE_LANG` | Idioma fuente por defecto para traducciones automáticas. | `auto` |
-| `TOOLSTRANSLATOR_TARGET_LANG` | Idioma destino por defecto. | `en` |
-| `TOOLSTRANSLATOR_LOCALE_DIR` | Directorio donde se buscan/guardan los archivos de idioma. | `./locales` |
-| `TOOLSTRANSLATOR_MISSING_KEY` | Comportamiento ante claves faltantes (`key`, `message`). | `key` |
-| `TOOLSTRANSLATOR_LOG_LEVEL` | Nivel de log (`DEBUG`, `INFO`, `WARNING`, `ERROR`). | `INFO` |
+| Variable | Default | Descripción |
+|----------|---------|-------------|
+| `TOOLSTRANSLATOR_BASE_URL` | `http://localhost:5000` | URL del servidor LibreTranslate |
+| `TOOLSTRANSLATOR_TIMEOUT` | `10` | Timeout HTTP en segundos |
+| `TOOLSTRANSLATOR_SOURCE_LANG` | `auto` | Idioma fuente por defecto (auto=detección) |
+| `TOOLSTRANSLATOR_TARGET_LANG` | `en` | Idioma destino por defecto |
+| `TOOLSTRANSLATOR_LOCALE_DIR` | `./locales` | Directorio de archivos de idioma |
+| `TOOLSTRANSLATOR_MISSING_KEY` | `key` | Comportamiento ante claves faltantes |
+| `TOOLSTRANSLATOR_LOG_LEVEL` | `INFO` | Nivel de logging |
 
-## Configuración en Código
+## Ejemplos de Configuración
 
-También puedes sobrescribir estos valores al instanciar la clase `Translator`:
+### Proyecto local con LibreTranslate
 
-```python
-from translator import Translator
-
-trans = Translator(
-    base_url="http://mi-servidor-traduccion:5000",
-    timeout=5.0,
-    directory="/app/locales",
-    missing_key_behavior="message"
-)
+```bash
+export TOOLSTRANSLATOR_BASE_URL="http://localhost:5000"
+export TOOLSTRANSLATOR_LOCALE_DIR="./src/locales"
+export TOOLSTRANSLATOR_LOG_LEVEL="DEBUG"
 ```
 
-## Comportamiento de Claves Faltantes (`missing_key_behavior`)
+### Servidor remoto
 
-- **`key`**: Devuelve el nombre de la clave solicitada si no se encuentra traducción.
-- **`message`**: Devuelve el mensaje "Missing translation".
+```bash
+export TOOLSTRANSLATOR_BASE_URL="https://translate.miempresa.com"
+export TOOLSTRANSLATOR_TIMEOUT="30"
+```
 
-## Auto Add Missing Keys (`auto_add_missing_keys`)
+### Solo gestión de archivos (sin servidor)
 
-Esta opción no se configura por variable de entorno, sino directamente en el constructor de `Translator`.
+```python
+# No necesitas configurar TOOLSTRANSLATOR_BASE_URL si no usas translate()
+from translator import Translator
+trans = Translator(lang="es", directory="./locales")
+```
 
-- **`True`**: Crea automáticamente la clave faltante en el archivo de idioma con el valor "TODO: agregar traducción".
-- **`False`**: No modifica el archivo (comportamiento por defecto).
+## Niveles de Logging
+
+| Nivel | Qué muestra |
+|-------|-------------|
+| `DEBUG` | Todo: cambios de idioma, claves faltantes, cache hits |
+| `INFO` | Auto-add de claves, operaciones significativas |
+| `WARNING` | Fallbacks, degradaciones |
+| `ERROR` | Fallos de traducción, archivos corruptos |
+
+```bash
+export TOOLSTRANSLATOR_LOG_LEVEL="DEBUG"
+```
+
+O desde Python:
+
+```python
+import logging
+logging.getLogger("translator").setLevel(logging.DEBUG)
+```
+
+## Estructura de Archivos de Idioma
+
+### Formato JSON (recomendado)
+
+```json
+{
+  "app": {
+    "title": "Mi Aplicación",
+    "buttons": {
+      "save": "Guardar",
+      "cancel": "Cancelar"
+    }
+  },
+  "greeting": "Hola {{name}}"
+}
+```
+
+### Formato YAML
+
+```yaml
+app:
+  title: Mi Aplicación
+  buttons:
+    save: Guardar
+    cancel: Cancelar
+greeting: "Hola {{name}}"
+```
+
+### Valores dinámicos
+
+```json
+{
+  "welcome": {
+    "__translate__": "Welcome to our app",
+    "source": "en",
+    "target": "es"
+  }
+}
+```
+
+Al acceder a `trans.welcome`, se ejecuta `translate("Welcome to our app", "en", "es")`.
+
+### Convenciones de nombres
+
+Los archivos se buscan en orden:
+1. `{lang}.json`
+2. `{lang}.yaml`
+3. `{lang}.yml`
+
+Ejemplos válidos: `en.json`, `es.yaml`, `pt_BR.yml`, `zh_Hans.json`

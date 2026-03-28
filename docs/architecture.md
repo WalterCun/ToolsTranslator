@@ -1,49 +1,143 @@
-# Arquitectura
+# Arquitectura del Sistema
 
-ToolsTranslator está diseñado con una arquitectura modular que separa claramente las responsabilidades de gestión de archivos, traducción y acceso a datos.
+## Visión General
 
-## Estructura del Proyecto
+ToolsTranslator sigue una arquitectura modular con separación clara de responsabilidades.
 
-El proyecto se organiza en los siguientes módulos principales:
+```
+translator/
+├── core/           # Lógica principal del SDK
+├── adapters/       # Backends de traducción (pluggable)
+├── handlers/       # Lectura/escritura de archivos (JSON, YAML)
+├── managers/       # Gestión de servicios externos (Docker)
+├── cli/            # Interfaz de línea de comandos
+├── utils/          # Utilidades (fileinfo, etc.)
+├── config.py       # Configuración centralizada
+└── exceptions.py   # Jerarquía de excepciones
+```
 
-- **`translator/core`**: Contiene la lógica central de la librería.
-    - `Translator`: Clase principal que actúa como punto de entrada para el usuario. Gestiona la carga de archivos, el acceso a claves y la interacción con adaptadores de traducción.
-    - `AutoTranslate`: Componente opcional para la generación automática de archivos de idioma utilizando servicios externos.
+## Componentes Principales
 
-- **`translator/adapters`**: Define interfaces y adaptadores para servicios de traducción.
-    - `TranslationAdapter`: Protocolo que define la interfaz común para cualquier servicio de traducción.
-    - `LibreTranslateClient`: Implementación concreta para interactuar con la API de LibreTranslate.
+### Core (`translator/core/`)
 
-- **`translator/handlers`**: Manejadores de formatos de archivo.
-    - `JsonHandler`: Lectura y escritura de archivos JSON.
-    - `YamlHandler`: Lectura y escritura de archivos YAML (requiere `PyYAML`).
+**`Translator`** — Entrada principal del SDK. Responsabilidades:
+- Cargar y cachear archivos de idioma
+- Resolver claves por atributos (`trans.home.title`) o por puntos (`get("home.title")`)
+- Delegar traducciones al adapter configurado
+- Gestionar claves faltantes (auto-add, fallback, etc.)
+- Thread-safe con `threading.RLock`
 
-- **`translator/cli`**: Interfaz de línea de comandos (CLI) construida con `Typer`.
-    - `app.py`: Definición de comandos (`install`, `doctor`, `status`, etc.) para gestionar el servidor de traducción local.
-    - `DockerManager`: Utilidad para interactuar con Docker y gestionar el contenedor de LibreTranslate.
+**`TranslationProxy`** — Proxy para acceso dinámico por atributos.
+- Navega dicts anidados como `trans.section.subsection.key`
+- Resuelve automáticamente `__translate__` dinámicos
 
-- **`translator/utils`**: Utilidades generales.
-    - `fileinfo.py`: Clases auxiliares para manejar información de archivos (`TranslateFile`).
+**`AutoTranslate`** — Generación automática de archivos de idioma.
+- Lee un archivo base y genera traducciones para múltiples idiomas
+- Usa adapter de traducción (LibreTranslate u otro)
 
-## Separación de Responsabilidades
+### Adapters (`translator/adapters/`)
 
-### Modo Archivos (Estático)
+**`TranslationAdapter`** (Protocol) — Contrato que debe cumplir cualquier backend:
+```python
+class TranslationAdapter(Protocol):
+    def available(self) -> tuple[bool, str]: ...
+    def translate(self, text: str, source: str, target: str) -> str: ...
+```
 
-En su uso más básico, `Translator` opera en modo "archivos". Carga los datos de traducción desde archivos JSON o YAML en memoria y permite acceder a ellos mediante atributos dinámicos (`__getattr__`).
+**`LibreTranslateClient`** — Implementación por defecto:
+- HTTP client para LibreTranslate API
+- Cache TTL de 30s en `available()` (evita doble HTTP call)
+- Retry con backoff en errores transitorios
 
-- **Ventajas**: Rápido, sin dependencias externas en tiempo de ejecución, ideal para producción.
-- **Flujo**: `Translator` -> `JsonHandler`/`YamlHandler` -> Archivos locales.
+**`HttpClient`** — Wrapper HTTP con stdlib:
+- Retry automático (3 intentos, backoff exponencial)
+- No reintenta errores 4xx del cliente (excepto 429)
 
-### Modo Server (Dinámico/Opcional)
+### Handlers (`translator/handlers/`)
 
-Para funcionalidades avanzadas como `AutoTranslate` o traducción en tiempo real (`translate()`), `Translator` puede utilizar un adaptador de traducción.
+- **`JsonHandler`** — Lectura/escritura atómica de JSON
+- **`YamlHandler`** — Lectura/escritura atómica de YAML (lazy import)
+- **`io_handlers`** — Funciones compartidas: `read_mapping`, `write_mapping`, `flatten`, `unflatten`
 
-- **Requisitos**: Requiere instalar las dependencias extra `[server]` y tener acceso a un servidor LibreTranslate (local o remoto).
-- **Flujo**: `Translator` -> `LibreTranslateClient` -> API HTTP -> Servidor LibreTranslate.
+### Managers (`translator/managers/`)
 
-## Extensibilidad
+**`DockerManager`** — Gestión del ciclo de vida de LibreTranslate en Docker:
+- Diagnóstico (estilo `flutter doctor`)
+- Pull de imagen con retry
+- Creación/arranque/parada de contenedor
+- Healthcheck HTTP
 
-La arquitectura permite extender la funcionalidad mediante:
+## Flujo de Ejecución
 
-1.  **Nuevos Adaptadores**: Implementando `TranslationAdapter` para soportar otros servicios de traducción (ej. Google Translate, DeepL).
-2.  **Nuevos Formatos**: Añadiendo manejadores en `translator/handlers` para soportar otros formatos de archivo (ej. TOML, XML).
+### Inicialización
+
+```
+Translator.__init__()
+  ├── Leer configuración (env vars)
+  ├── Crear adapter (LibreTranslateClient o custom)
+  ├── Crear directorio de locales si no existe
+  └── Cargar archivo de idioma activo → _load_language(lang)
+        ├── Buscar {lang}.json, {lang}.yaml, {lang}.yml
+        ├── Si no existe → usar fallback_lang
+        └── Cachear en _lang_cache
+```
+
+### Acceso a traducción
+
+```
+trans.get("home.title")
+  ├── Verificar _resolved_cache → hit? retornar
+  ├── Cargar datos del idioma (cacheado)
+  ├── _deep_get(data, "home.title")
+  ├── Si es None → manejar missing key
+  ├── Si es dict con __translate__ → resolver dinámico
+  ├── Si es dict → retornar TranslationProxy
+  ├── Si es string → resolver dynamic value
+  └── Guardar en cache y retornar
+```
+
+### Traducción directa
+
+```
+trans.translate("Hello", target="es")
+  ├── Resolver idiomas source/target
+  ├── adapter.available() → cache TTL 30s
+  ├── adapter.translate(text, source, target)
+  └── Retornar resultado o fallback
+```
+
+### Instalación automática
+
+```
+toolstranslator install
+  ├── [1/5] Verificar Docker instalado
+  ├── [2/5] Verificar Docker daemon activo
+  ├── [3/5] Pull imagen LibreTranslate (con retry)
+  ├── [4/5] Crear/arrancar contenedor
+  └── [5/5] Healthcheck HTTP
+```
+
+## Jerarquía de Excepciones
+
+```
+ToolsTranslatorError (base del SDK)
+├── ServiceUnavailableError     — Servicio de traducción caído
+├── ExtraNotInstalledError      — Falta dependencia opcional
+├── TranslationFileError        — Archivo corrupto o inaccesible
+└── LanguageNotAvailableError   — Idioma no encontrado
+
+AutoTranslateError (base de AutoTranslate)
+├── ServerDependencyMissingError — Sin adapter ni servidor
+└── LanguageDetectionError       — No se detectó idioma del archivo
+```
+
+## Patrones de Diseño
+
+| Patrón | Uso |
+|--------|-----|
+| **Protocol** | `TranslationAdapter` define contrato sin herencia |
+| **Proxy** | `TranslationProxy` para acceso dinámico por atributos |
+| **Facade** | `Translator` encapsula handlers, cache, proxy, adapter |
+| **Adapter** | `LibreTranslateClient` implementa traducción vía HTTP |
+| **Cache TTL** | `available()` cachea resultado por 30 segundos |
+| **Atomic Write** | Handlers escriben a temp file + rename |

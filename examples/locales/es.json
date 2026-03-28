@@ -1,0 +1,10 @@
+{
+  "app": {
+    "title": "Mi Aplicación",
+    "buttons": {
+      "save": "Guardar",
+      "cancel": "Cancelar"
+    }
+  },
+  "greeting": "¡Hola!"
+}

@@ -1,75 +1,186 @@
-# CLI de translator
+# Documentación CLI
 
-translator incluye una interfaz de línea de comandos (CLI) para gestionar el servidor de traducción local basado en Docker.
+## Visión General
 
-## Comandos Disponibles
-
-### `install`
-
-Prepara y valida el entorno de ejecución de LibreTranslate paso a paso.
+La CLI de ToolsTranslator se instala como `toolstranslator` y gestiona el ciclo de vida del servidor LibreTranslate.
 
 ```bash
-translator install
+toolstranslator [COMANDO]
 ```
 
-Este comando verifica:
-1.  Si Docker está instalado.
-2.  Si el servicio Docker está activo.
-3.  Si la imagen de LibreTranslate existe (la descarga si no).
-4.  Inicia el contenedor.
-5.  Verifica la conectividad del servidor.
+## Comandos
 
 ### `doctor`
 
-Ejecuta un diagnóstico completo del entorno, similar a `flutter doctor`.
+Diagnóstico completo del entorno. Estilo `flutter doctor`.
 
 ```bash
-translator doctor
+toolstranslator doctor
 ```
 
-Muestra el estado de cada componente (Docker, imagen, contenedor, API) y sugiere acciones correctivas si algo falla.
+**Verifica:**
+1. Docker instalado
+2. Docker daemon activo
+3. Imagen LibreTranslate disponible
+4. Contenedor existe
+5. Contenedor en ejecución
+6. API accesible
+
+**Códigos de salida:**
+| Código | Significado |
+|--------|-------------|
+| 0 | Todo OK |
+| 1 | Parcialmente operativo |
+| 2 | No operativo |
+
+**Ejemplo:**
+```
+$ toolstranslator doctor
+
+ToolsTranslator Doctor
+Analizando entorno del servidor de traducción...
+
+✔ Docker instalado: Docker CLI detectado.
+✔ Servicio Docker activo: Docker daemon responde correctamente.
+✔ Imagen LibreTranslate: Imagen disponible.
+✔ Contenedor LibreTranslate: Contenedor existe.
+✔ Contenedor en ejecución: Contenedor en ejecución.
+✔ Conectividad API LibreTranslate: Service reachable (24 languages).
+
+✔ Listo para usar
+```
+
+### `install`
+
+Instalación automática paso a paso.
+
+```bash
+toolstranslator install
+```
+
+**Pasos:**
+1. Verifica Docker instalado
+2. Verifica Docker daemon activo
+3. Descarga imagen (si no existe)
+4. Crea/arranca contenedor
+5. Verifica conectividad API
+
+**Ejemplo:**
+```
+$ toolstranslator install
+
+ToolsTranslator Install
+[1/5] Verificando Docker instalado...
+✔ Docker instalado.
+[2/5] Verificando servicio Docker...
+✔ Docker daemon activo.
+[3/5] Verificando imagen de LibreTranslate...
+  Imagen no encontrada, descargando...
+✔ Imagen descargada correctamente.
+[4/5] Iniciando contenedor LibreTranslate...
+✔ Contenedor operativo: <container_id>
+[5/5] Verificando conectividad del servidor...
+✔ Service reachable (24 languages).
+
+✔ Instalación completada: entorno listo para usar.
+```
 
 ### `status`
 
-Muestra un resumen rápido del estado del servidor.
+Estado rápido del servicio.
 
 ```bash
-translator status
+toolstranslator status
 ```
 
-Salida esperada:
+**Salida:**
 ```
 container_running=True
 api_healthy=True
-details=ok
+details=Service reachable (24 languages).
 ```
+
+**Útil para:** Scripts, health checks, monitoreo.
 
 ### `restart`
 
-Reinicia el contenedor de LibreTranslate de forma controlada.
+Reinicia el contenedor de LibreTranslate.
 
 ```bash
-translator restart
+toolstranslator restart
 ```
-
-Útil si el servidor deja de responder o necesitas aplicar cambios de configuración.
 
 ### `clean-server`
 
-Elimina el contenedor de LibreTranslate (mantiene la imagen descargada).
+Elimina el contenedor (preserva la imagen).
 
 ```bash
-translator clean-server
+toolstranslator clean-server
 ```
 
-Utiliza este comando si quieres empezar desde cero o liberar recursos temporalmente.
+**Útil para:** Empezar de limpio sin descargar la imagen de nuevo.
 
-## Requisitos
+## Casos de Uso Reales
 
-Para utilizar estos comandos, asegúrate de haber instalado translator con el extra `[server]`:
+### Primera vez en un proyecto
 
 ```bash
-pip install translator[server]
+# 1. Instalar dependencias
+pip install toolstranslator[server,yml]
+
+# 2. Verificar Docker
+toolstranslator doctor
+
+# 3. Instalar LibreTranslate
+toolstranslator install
+
+# 4. Verificar
+toolstranslator status
 ```
 
-Y tener Docker Desktop o Docker Engine instalado y ejecutándose en tu sistema.
+### CI/CD Pipeline
+
+```yaml
+# GitHub Actions ejemplo
+- name: Setup LibreTranslate
+  run: |
+    pip install toolstranslator[server]
+    toolstranslator install
+    toolstranslator status
+```
+
+### Debug de problemas
+
+```bash
+# Diagnóstico completo
+toolstranslator doctor
+
+# Ver logs del contenedor
+docker logs translator-libretranslate
+
+# Reiniciar si hay problemas
+toolstranslator restart
+
+# Eliminar y recrear
+toolstranslator clean-server
+toolstranslator install
+```
+
+## Configuración del Servidor
+
+### Puerto personalizado
+
+```bash
+# Arrancar en puerto 5001
+docker run -d --name translator-libretranslate -p 5001:5000 libretranslate/libretranslate:latest
+
+# Configurar la librería
+export TOOLSTRANSLATOR_BASE_URL="http://localhost:5001"
+```
+
+### Servidor remoto
+
+```bash
+export TOOLSTRANSLATOR_BASE_URL="http://mi-servidor:5000"
+toolstranslator status  # Verificará contra el servidor remoto
+```
