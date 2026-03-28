@@ -88,6 +88,13 @@ class Translator:
         langs = sorted({p.stem for p in self.directory.glob("*.json")} | {p.stem for p in self.directory.glob("*.yaml")})
         return langs
 
+    def _resolve_langs(self, source: str | None, target: str | None) -> tuple[str, str]:
+        """Resolve source and target languages with defaults."""
+        return (
+            source or settings.default_source_lang,
+            target or settings.default_target_lang,
+        )
+
     def translate(
         self,
         text: str,
@@ -95,8 +102,7 @@ class Translator:
         target: str | None = None,
         fallback: Callable[[str], str] | str | None = None,
     ) -> str:
-        source_lang = source or settings.default_source_lang
-        target_lang = target or settings.default_target_lang
+        source_lang, target_lang = self._resolve_langs(source, target)
         try:
             return self.client.translate(text=text, source=source_lang, target=target_lang)
         except Exception:
@@ -107,8 +113,7 @@ class Translator:
             raise
 
     async def translate_async(self, text: str, source: str | None = None, target: str | None = None) -> str:
-        source_lang = source or settings.default_source_lang
-        target_lang = target or settings.default_target_lang
+        source_lang, target_lang = self._resolve_langs(source, target)
         return await self.client.translate_async(text=text, source=source_lang, target=target_lang)
 
     def get(
@@ -148,11 +153,19 @@ class Translator:
 
     def _resolve_attr(self, parts: list[str]) -> TranslationProxy | str:
         key = ".".join(parts)
+        # Check resolved cache first for leaf values
+        cache_key = (self._lang, key)
+        if cache_key in self._resolved_cache:
+            return self._resolved_cache[cache_key]
+
         data = self._current_data
         value = self._deep_get(data, key)
         if isinstance(value, dict) or value is None:
             return TranslationProxy(self, parts)
-        return str(self._resolve_dynamic_value(value, self._lang, None))
+
+        resolved = str(self._resolve_dynamic_value(value, self._lang, None))
+        self._resolved_cache[cache_key] = resolved
+        return resolved
 
     def generate_language_file(
         self,
