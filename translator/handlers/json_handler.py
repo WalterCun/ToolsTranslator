@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 from pathlib import Path
 from typing import Any
+
+from translator.exceptions import TranslationFileError
+
+log = logging.getLogger("translator")
 
 
 class JsonHandler:
@@ -12,8 +17,16 @@ class JsonHandler:
 
     @staticmethod
     def read(path: Path) -> dict[str, Any]:
-        with path.open("r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with path.open("r", encoding="utf-8") as f:
+                return json.load(f)
+        except json.JSONDecodeError as exc:
+            log.error("Corrupt JSON file: %s — %s", path, exc)
+            raise TranslationFileError(
+                f"Invalid JSON in {path}: {exc.msg} (line {exc.lineno}, col {exc.colno})"
+            ) from exc
+        except OSError as exc:
+            raise TranslationFileError(f"Cannot read {path}: {exc}") from exc
 
     @staticmethod
     def write(path: Path, data: dict[str, Any]) -> None:

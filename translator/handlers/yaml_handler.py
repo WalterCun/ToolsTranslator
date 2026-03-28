@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import os
 import tempfile
 from pathlib import Path
 from typing import Any
 
-from translator.exceptions import ExtraNotInstalledError
+from translator.exceptions import ExtraNotInstalledError, TranslationFileError
+
+log = logging.getLogger("translator")
 
 
 class YamlHandler:
@@ -24,8 +27,14 @@ class YamlHandler:
     @classmethod
     def read(cls, path: Path) -> dict[str, Any]:
         yaml = cls._load_yaml_module()
-        with path.open("r", encoding="utf-8") as f:
-            return yaml.safe_load(f) or {}
+        try:
+            with path.open("r", encoding="utf-8") as f:
+                return yaml.safe_load(f) or {}
+        except yaml.YAMLError as exc:  # type: ignore[attr-defined]
+            log.error("Corrupt YAML file: %s — %s", path, exc)
+            raise TranslationFileError(f"Invalid YAML in {path}: {exc}") from exc
+        except OSError as exc:
+            raise TranslationFileError(f"Cannot read {path}: {exc}") from exc
 
     @classmethod
     def write(cls, path: Path, data: dict[str, Any]) -> None:

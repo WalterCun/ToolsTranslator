@@ -8,6 +8,7 @@ from typing import Any, Callable
 from translator.adapters.libretranslate import LibreTranslateClient
 from translator.config import settings
 from translator.exceptions import LanguageNotAvailableError, TranslationFileError
+from translator.handlers.io_handlers import flatten, read_mapping, unflatten, write_mapping
 from translator.handlers.json_handler import JsonHandler
 from translator.handlers.yaml_handler import YamlHandler
 
@@ -79,7 +80,9 @@ class Translator:
 
     def change_lang(self, lang: str) -> None:
         self._current_data = self._load_language(lang)
+        old_lang = self._lang
         self._lang = lang
+        self.log.debug("Language changed: %s -> %s", old_lang, lang)
 
     def available_languages(self) -> list[str]:
         langs = sorted({p.stem for p in self.directory.glob("*.json")} | {p.stem for p in self.directory.glob("*.yaml")})
@@ -248,26 +251,17 @@ class Translator:
         JsonHandler.write(json_path, data)
 
     def _read_file(self, path: Path) -> dict[str, Any]:
-        if path.suffix.lower() == ".json":
-            return JsonHandler.read(path)
-        if path.suffix.lower() in {".yaml", ".yml"}:
-            return YamlHandler.read(path)
-        raise TranslationFileError(f"Unsupported file format: {path.suffix}")
+        return read_mapping(path)
 
     def _write_file(self, path: Path, data: dict[str, Any]) -> None:
-        if path.suffix.lower() == ".json":
-            JsonHandler.write(path, data)
-            return
-        if path.suffix.lower() in {".yaml", ".yml"}:
-            YamlHandler.write(path, data)
-            return
-        raise TranslationFileError(f"Unsupported output format: {path.suffix}")
+        write_mapping(path, data)
 
     def _missing_value(self, key: str, default: str | None) -> str:
         if default is not None:
             return default
         if self.missing_key_behavior == "message":
             return "Missing translation"
+        self.log.debug("Missing translation key: %s (lang=%s)", key, self._lang)
         return key
 
     def _add_missing_key(self, key: str) -> None:
@@ -278,6 +272,7 @@ class Translator:
                 self._write_lang_file(self._lang, current)
                 self._lang_cache[self._lang] = current
                 self._current_data = current
+                self.log.info("Auto-added missing key '%s' to %s.json", key, self._lang)
             self._resolved_cache[(self._lang, key)] = self.missing_value_template
 
     @staticmethod
@@ -303,18 +298,10 @@ class Translator:
 
     @staticmethod
     def _flatten(data: dict[str, Any], parent: str = "") -> dict[str, Any]:
-        out: dict[str, Any] = {}
-        for key, value in data.items():
-            full = f"{parent}.{key}" if parent else key
-            if isinstance(value, dict) and "__translate__" not in value:
-                out.update(Translator._flatten(value, full))
-            else:
-                out[full] = value
-        return out
+        """Flatten nested dict, preserving dynamic __translate__ blocks."""
+        return flatten(data, parent, preserve_dynamic=True)
 
     @staticmethod
     def _unflatten(data: dict[str, Any]) -> dict[str, Any]:
-        out: dict[str, Any] = {}
-        for key, value in data.items():
-            Translator._deep_set(out, key, value)
-        return out
+        """Unflatten dotted keys back to nested dict."""
+        return unflatten(data)
