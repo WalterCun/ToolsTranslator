@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
+
+
+# Pattern for valid language codes: "es", "en", "pt", "zh", "pt_BR", "zh_Hans"
+_LANG_CODE_RE = re.compile(r"^[a-z]{2}(_[A-Z]{2,4})?$")
 
 
 @dataclass(slots=True)
@@ -25,9 +30,24 @@ class TranslateFile:
         return self.path.stem
 
     def detect_lang_from_name(self) -> str | None:
-        # es.json -> es, messages.es -> es
+        """Detect language code from filename.
+
+        Examples:
+            es.json -> es
+            messages.es.json -> es
+            pt_BR.json -> pt_BR
+            zh_Hans.yaml -> zh_Hans
+
+        Returns None if no valid language code is detected.
+        """
+        # Check dotted names first: "messages.es" -> extract "es"
         if "." in self.stem:
-            return self.stem.split(".")[-1]
-        if len(self.stem) in (2, 5):
+            candidate = self.stem.split(".")[-1]
+            if _LANG_CODE_RE.match(candidate):
+                return candidate
+            return None
+
+        # Direct name: "es.json" or "pt_BR.json"
+        if _LANG_CODE_RE.match(self.stem):
             return self.stem
         return None

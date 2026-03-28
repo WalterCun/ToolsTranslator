@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,3 +20,16 @@ class Settings:
 
 
 settings = Settings()
+
+
+def _configure_logging() -> None:
+    """Configure the 'translator' logger based on settings.log_level."""
+    logger = logging.getLogger("translator")
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(name)s %(levelname)s: %(message)s"))
+        logger.addHandler(handler)
+    logger.setLevel(getattr(logging, settings.log_level.upper(), logging.INFO))
+
+
+_configure_logging()

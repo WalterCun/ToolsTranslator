@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import time
 from dataclasses import dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -22,12 +23,20 @@ class DockerManager:
     container_name = "translator-libretranslate"
     image = "libretranslate/libretranslate:latest"
     port = 5000
+    _run_timeout = 30  # seconds
 
     def _run(self, *args: str) -> subprocess.CompletedProcess[str]:
         try:
-            return subprocess.run(["docker", *args], text=True, capture_output=True)
+            return subprocess.run(
+                ["docker", *args],
+                text=True,
+                capture_output=True,
+                timeout=self._run_timeout,
+            )
         except FileNotFoundError:
             return subprocess.CompletedProcess(args=["docker", *args], returncode=127, stdout="", stderr="docker not found")
+        except subprocess.TimeoutExpired:
+            return subprocess.CompletedProcess(args=["docker", *args], returncode=124, stdout="", stderr=f"timed out after {self._run_timeout}s")
 
     def docker_installed(self) -> bool:
         return self._run("--version").returncode == 0
@@ -39,9 +48,17 @@ class DockerManager:
         cmd = self._run("images", "--format", "{{.Repository}}:{{.Tag}}")
         return self.image in cmd.stdout.splitlines()
 
-    def pull_image(self) -> tuple[bool, str]:
-        cmd = self._run("pull", self.image)
-        return cmd.returncode == 0, cmd.stdout.strip() or cmd.stderr.strip()
+    def pull_image(self, retries: int = 3, base_delay: float = 2.0) -> tuple[bool, str]:
+        """Pull Docker image with retry and exponential backoff."""
+        last_output = ""
+        for attempt in range(retries):
+            cmd = self._run("pull", self.image)
+            last_output = cmd.stdout.strip() or cmd.stderr.strip()
+            if cmd.returncode == 0:
+                return True, last_output
+            if attempt < retries - 1:
+                time.sleep(base_delay * (2 ** attempt))
+        return False, last_output
 
     def container_exists(self) -> bool:
         cmd = self._run("ps", "-a", "--filter", f"name={self.container_name}", "--format", "{{.Names}}")
